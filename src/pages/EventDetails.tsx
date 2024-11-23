@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { UserMinus, UserPlus } from 'lucide-react';
 import {
   doc,
-  getDoc,
+  onSnapshot,
   updateDoc,
   arrayUnion,
   arrayRemove,
@@ -24,25 +24,30 @@ export default function EventDetails() {
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) return;
-      
-      try {
-        const docRef = doc(db, 'events', id);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          setEvent({ id: docSnap.id, ...docSnap.data() } as PokerEvent);
+    if (!id) return;
+
+    // Set up real-time listener for the event document
+    const unsubscribe = onSnapshot(
+      doc(db, 'events', id),
+      (doc) => {
+        if (doc.exists()) {
+          setEvent({ id: doc.id, ...doc.data() } as PokerEvent);
+        } else {
+          toast.error('Event not found');
+          navigate('/');
         }
-      } catch (error) {
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching event:', error);
         toast.error('Failed to load event');
-      } finally {
         setLoading(false);
       }
-    };
+    );
 
-    fetchEvent();
-  }, [id]);
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [id, navigate]);
 
   const handleJoin = async () => {
     if (!event || !user) return;
@@ -110,8 +115,8 @@ export default function EventDetails() {
 
   const isOwner = user?.uid === event.ownerId;
   const isParticipant = event.currentPlayers.includes(user?.uid || '');
-  const canJoin = !isParticipant && event.currentPlayers.length < event.maxPlayers;
   const isInvited = event.invitedPlayers?.includes(user?.email || '');
+  const canJoin = !isParticipant && event.currentPlayers.length < event.maxPlayers;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -157,28 +162,6 @@ export default function EventDetails() {
           )}
         </div>
 
-        {isOwner && event.invitedPlayers?.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold mb-4">Invited Players</h3>
-            <div className="space-y-2">
-              {event.invitedPlayers.map((email) => (
-                <div
-                  key={email}
-                  className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
-                >
-                  <span>{email}</span>
-                  <button
-                    onClick={() => handleRemoveInvite(email)}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    <UserMinus size={18} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {event.status === 'completed' && event.winners && (
           <div className="mt-8">
             <h2 className="text-xl font-bold mb-4">Winners</h2>
@@ -201,6 +184,28 @@ export default function EventDetails() {
                   <p className="text-lg">${event.winners.third.prize}</p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {isOwner && event.invitedPlayers?.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Invited Players</h3>
+            <div className="space-y-2">
+              {event.invitedPlayers.map((email) => (
+                <div
+                  key={email}
+                  className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+                >
+                  <span>{email}</span>
+                  <button
+                    onClick={() => handleRemoveInvite(email)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <UserMinus size={18} />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}

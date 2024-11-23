@@ -24,6 +24,10 @@ export default function InviteModal({ event, onClose, onInvite }: InviteModalPro
       // First update Firestore with the invited player
       await onInvite(email);
       
+      // Generate the absolute URL for the event
+      const baseUrl = window.location.origin;
+      const eventUrl = `${baseUrl}/#/event/${event.id}`;
+      
       // Then send the invitation email using EmailJS
       const templateParams = {
         to_email: email,
@@ -31,7 +35,7 @@ export default function InviteModal({ event, onClose, onInvite }: InviteModalPro
         event_date: format(new Date(event.date), 'PPP p'),
         event_location: event.location,
         event_buyin: event.buyIn,
-        event_link: `${window.location.origin}/event/${event.id}`,
+        event_link: eventUrl,
         reply_to: 'noreply@suckingout.com'
       };
 
