@@ -25,6 +25,7 @@ export default function CreateEvent() {
         buyIn: Number(formData.buyIn),
         maxPlayers: Number(formData.maxPlayers),
         currentPlayers: [user!.uid],
+        invitedPlayers: [],
         ownerId: user!.uid,
         status: 'upcoming',
         createdAt: new Date().toISOString(),

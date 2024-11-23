@@ -6,6 +6,7 @@ export interface PokerEvent {
   buyIn: number;
   maxPlayers: number;
   currentPlayers: string[];
+  invitedPlayers: string[];
   ownerId: string;
   winners?: {
     first?: { userId: string; prize: number };

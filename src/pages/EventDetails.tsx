@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import { UserMinus, UserPlus } from 'lucide-react';
 import {
   doc,
   getDoc,
@@ -12,6 +13,7 @@ import {
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { PokerEvent } from '../types';
+import InviteModal from '../components/InviteModal';
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ export default function EventDetails() {
   const { user } = useAuth();
   const [event, setEvent] = useState<PokerEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -47,7 +50,8 @@ export default function EventDetails() {
     try {
       const eventRef = doc(db, 'events', event.id);
       await updateDoc(eventRef, {
-        currentPlayers: arrayUnion(user.uid)
+        currentPlayers: arrayUnion(user.uid),
+        invitedPlayers: arrayRemove(user.email)
       });
       toast.success('Successfully joined the event!');
     } catch (error) {
@@ -69,18 +73,30 @@ export default function EventDetails() {
     }
   };
 
-  const handleSetWinners = async (winners: PokerEvent['winners']) => {
+  const handleInvite = async (email: string) => {
     if (!event) return;
     
     try {
       const eventRef = doc(db, 'events', event.id);
       await updateDoc(eventRef, {
-        winners,
-        status: 'completed'
+        invitedPlayers: arrayUnion(email)
       });
-      toast.success('Winners updated successfully!');
     } catch (error) {
-      toast.error('Failed to update winners');
+      throw new Error('Failed to update invited players');
+    }
+  };
+
+  const handleRemoveInvite = async (email: string) => {
+    if (!event) return;
+    
+    try {
+      const eventRef = doc(db, 'events', event.id);
+      await updateDoc(eventRef, {
+        invitedPlayers: arrayRemove(email)
+      });
+      toast.success('Invitation removed');
+    } catch (error) {
+      toast.error('Failed to remove invitation');
     }
   };
 
@@ -95,6 +111,7 @@ export default function EventDetails() {
   const isOwner = user?.uid === event.ownerId;
   const isParticipant = event.currentPlayers.includes(user?.uid || '');
   const canJoin = !isParticipant && event.currentPlayers.length < event.maxPlayers;
+  const isInvited = event.invitedPlayers?.includes(user?.email || '');
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -111,20 +128,56 @@ export default function EventDetails() {
           </div>
 
           {event.status === 'upcoming' && (
-            <div>
-              {canJoin && (
-                <button onClick={handleJoin} className="btn-primary">
+            <div className="space-y-2">
+              {isOwner && (
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  <UserPlus size={18} />
+                  Invite Players
+                </button>
+              )}
+              {canJoin && isInvited && (
+                <button onClick={handleJoin} className="btn-primary w-full">
+                  Accept Invitation
+                </button>
+              )}
+              {canJoin && !isInvited && (
+                <button onClick={handleJoin} className="btn-primary w-full">
                   Join Event
                 </button>
               )}
               {isParticipant && !isOwner && (
-                <button onClick={handleLeave} className="btn-secondary">
+                <button onClick={handleLeave} className="btn-secondary w-full">
                   Leave Event
                 </button>
               )}
             </div>
           )}
         </div>
+
+        {isOwner && event.invitedPlayers?.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Invited Players</h3>
+            <div className="space-y-2">
+              {event.invitedPlayers.map((email) => (
+                <div
+                  key={email}
+                  className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+                >
+                  <span>{email}</span>
+                  <button
+                    onClick={() => handleRemoveInvite(email)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <UserMinus size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {event.status === 'completed' && event.winners && (
           <div className="mt-8">
@@ -151,31 +204,15 @@ export default function EventDetails() {
             </div>
           </div>
         )}
-
-        {isOwner && event.status === 'upcoming' && (
-          <div className="mt-8">
-            <h2 className="text-xl font-bold mb-4">Manage Event</h2>
-            <div className="space-x-4">
-              <button
-                onClick={() => {
-                  // Add winner management logic
-                }}
-                className="btn-primary"
-              >
-                Set Winners
-              </button>
-              <button
-                onClick={() => {
-                  // Add cancellation logic
-                }}
-                className="btn-secondary"
-              >
-                Cancel Event
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {showInviteModal && (
+        <InviteModal
+          event={event}
+          onClose={() => setShowInviteModal(false)}
+          onInvite={handleInvite}
+        />
+      )}
     </div>
   );
 }
