@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { User, History, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -15,11 +16,26 @@ export default function Navbar() {
           </Link>
           
           <div className="flex items-center space-x-6">
-            <Link to="/" className="text-gray-300 hover:text-white transition-colors">
+            <Link 
+              to="/" 
+              className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <LayoutDashboard size={18} />
               Dashboard
             </Link>
-            <Link to="/history" className="text-gray-300 hover:text-white transition-colors">
+            <Link 
+              to="/history" 
+              className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <History size={18} />
               History
+            </Link>
+            <Link 
+              to="/profile" 
+              className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <User size={18} />
+              Profile
             </Link>
             <button
               onClick={() => logout()}

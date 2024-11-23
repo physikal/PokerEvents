@@ -8,7 +8,6 @@ export function useUserStats() {
   const [stats, setStats] = useState<UserStats>({
     gamesPlayed: 0,
     gamesWon: 0,
-    totalEarnings: 0,
     upcomingGames: 0
   });
   const [loading, setLoading] = useState(true);
@@ -41,26 +40,17 @@ export function useUserStats() {
       ]);
 
       let gamesWon = 0;
-      let totalEarnings = 0;
 
       completedSnap.forEach(doc => {
         const data = doc.data();
-        if (data.winners) {
-          if (data.winners.first?.userId === user.uid) {
-            gamesWon++;
-            totalEarnings += data.winners.first.prize;
-          } else if (data.winners.second?.userId === user.uid) {
-            totalEarnings += data.winners.second.prize;
-          } else if (data.winners.third?.userId === user.uid) {
-            totalEarnings += data.winners.third.prize;
-          }
+        if (data.winners?.first?.userId === user.uid) {
+          gamesWon++;
         }
       });
 
       setStats({
         gamesPlayed: completedSnap.size,
         gamesWon,
-        totalEarnings,
         upcomingGames: upcomingSnap.size
       });
       setLoading(false);

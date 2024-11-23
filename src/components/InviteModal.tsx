@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import emailjs from '@emailjs/browser';
-import { format } from 'date-fns';
 import { PokerEvent } from '../types';
+import { formatToPacific } from '../utils/dateUtils';
 
 interface InviteModalProps {
   event: PokerEvent;
@@ -32,7 +32,7 @@ export default function InviteModal({ event, onClose, onInvite }: InviteModalPro
       const templateParams = {
         to_email: email,
         event_title: event.title,
-        event_date: format(new Date(event.date), 'PPP p'),
+        event_date: formatToPacific(event.date),
         event_location: event.location,
         event_buyin: event.buyIn,
         event_link: eventUrl,

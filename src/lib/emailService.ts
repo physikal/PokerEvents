@@ -13,6 +13,13 @@ interface EmailTemplate {
   reply_to: string;
 }
 
+interface CancellationTemplate {
+  to_emails: string[];
+  event_title: string;
+  event_date: string;
+  event_location: string;
+}
+
 export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
   try {
     const response = await emailjs.send(
@@ -23,6 +30,30 @@ export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
     return response;
   } catch (error) {
     console.error('Email sending failed:', error);
+    throw error;
+  }
+};
+
+export const sendCancellationEmails = async (params: CancellationTemplate) => {
+  try {
+    // Send emails to all participants and invited players
+    const emailPromises = params.to_emails.map(email => 
+      emailjs.send(
+        'service_4rpie4o',
+        'template_25uo227',
+        {
+          to_email: email,
+          event_title: params.event_title,
+          event_date: params.event_date,
+          event_location: params.event_location,
+          reply_to: 'noreply@suckingout.com'
+        }
+      )
+    );
+
+    await Promise.all(emailPromises);
+  } catch (error) {
+    console.error('Failed to send cancellation emails:', error);
     throw error;
   }
 };

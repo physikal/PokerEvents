@@ -15,11 +15,20 @@ export interface PokerEvent {
   };
   status: 'upcoming' | 'in-progress' | 'completed';
   createdAt: string;
+  timezone?: string;
 }
 
 export interface UserStats {
   gamesPlayed: number;
   gamesWon: number;
-  totalEarnings: number;
   upcomingGames: number;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName?: string;
+  timezone: string;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -11,14 +11,23 @@ service cloud.firestore {
       return isAuthenticated() && eventData.ownerId == request.auth.uid;
     }
     
+    // Helper function to check if user is invited
+    function isInvited(eventData) {
+      return isAuthenticated() && request.auth.token.email in eventData.invitedPlayers;
+    }
+
     // Helper function to check if user is event participant
     function isEventParticipant(eventData) {
       return isAuthenticated() && request.auth.uid in eventData.currentPlayers;
     }
 
-    // Helper function to check if user is invited
-    function isInvited(eventData) {
-      return isAuthenticated() && request.auth.token.email in eventData.invitedPlayers;
+    // User profiles
+    match /users/{userId} {
+      // Allow reading any user profile if authenticated
+      allow read: if isAuthenticated();
+      // Only allow users to create/update their own profile
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Events collection rules
@@ -33,7 +42,7 @@ service cloud.firestore {
         isEventOwner(resource.data) ||
         (
           // Allow updating currentPlayers and invitedPlayers arrays when invited
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPlayers', 'invitedPlayers']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPlayers', 'invitedPlayers', 'winners', 'status']) &&
           (isEventOwner(resource.data) || isInvited(resource.data)) &&
           // Ensure other fields remain unchanged
           request.resource.data.title == resource.data.title &&
@@ -41,8 +50,7 @@ service cloud.firestore {
           request.resource.data.location == resource.data.location &&
           request.resource.data.buyIn == resource.data.buyIn &&
           request.resource.data.maxPlayers == resource.data.maxPlayers &&
-          request.resource.data.ownerId == resource.data.ownerId &&
-          request.resource.data.status == resource.data.status
+          request.resource.data.ownerId == resource.data.ownerId
         )
       );
       

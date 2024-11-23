@@ -3,6 +3,7 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { PokerEvent } from '../types';
+import { nowInPacific } from '../utils/dateUtils';
 
 export function usePokerEvents(type: 'upcoming' | 'past') {
   const [events, setEvents] = useState<PokerEvent[]>([]);
@@ -13,7 +14,7 @@ export function usePokerEvents(type: 'upcoming' | 'past') {
     if (!user) return;
 
     const eventsRef = collection(db, 'events');
-    const now = new Date().toISOString();
+    const now = nowInPacific().toISOString();
     
     const q = query(
       eventsRef,

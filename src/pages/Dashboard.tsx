@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -7,6 +6,7 @@ import { usePokerEvents } from '../hooks/usePokerEvents';
 import { useInvitations } from '../hooks/useInvitations';
 import { useUserStats } from '../hooks/useUserStats';
 import { useAuth } from '../contexts/AuthContext';
+import { formatToPacific } from '../utils/dateUtils';
 
 export default function Dashboard() {
   const { events: upcomingEvents, loading: eventsLoading } = usePokerEvents('upcoming');
@@ -36,7 +36,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card bg-gradient-to-br from-poker-red to-red-800">
           <div className="flex items-center justify-between">
             <div>
@@ -51,15 +51,6 @@ export default function Dashboard() {
             <div>
               <p className="text-sm text-gray-900">Wins</p>
               <p className="text-2xl font-bold text-gray-900">{stats.gamesWon}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="card bg-gradient-to-br from-green-600 to-green-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-200">Total Earnings</p>
-              <p className="text-2xl font-bold">${stats.totalEarnings}</p>
             </div>
           </div>
         </div>
@@ -86,7 +77,7 @@ export default function Dashboard() {
                 <div>
                   <h3 className="font-semibold">{event.title}</h3>
                   <p className="text-sm text-gray-400">
-                    {format(new Date(event.date), 'PPP p')} at {event.location}
+                    {formatToPacific(event.date)} at {event.location}
                   </p>
                   <p className="text-sm text-poker-red font-medium">
                     ${event.buyIn} buy-in
@@ -126,7 +117,7 @@ export default function Dashboard() {
                   <div>
                     <h3 className="font-semibold text-lg">{event.title}</h3>
                     <p className="text-gray-400">
-                      {format(new Date(event.date), 'PPP p')} at {event.location}
+                      {formatToPacific(event.date)} at {event.location}
                     </p>
                   </div>
                   <div className="text-right">

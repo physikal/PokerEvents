@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { toPacificISOString } from '../utils/dateUtils';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
@@ -22,13 +23,14 @@ export default function CreateEvent() {
     try {
       const eventData = {
         ...formData,
+        date: toPacificISOString(new Date(formData.date)),
         buyIn: Number(formData.buyIn),
         maxPlayers: Number(formData.maxPlayers),
         currentPlayers: [user!.uid],
         invitedPlayers: [],
         ownerId: user!.uid,
         status: 'upcoming',
-        createdAt: new Date().toISOString(),
+        createdAt: toPacificISOString(new Date()),
       };
 
       const docRef = await addDoc(collection(db, 'events'), eventData);
@@ -67,7 +69,7 @@ export default function CreateEvent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Date & Time</label>
+              <label className="block text-sm font-medium mb-1">Date & Time (Pacific)</label>
               <input
                 type="datetime-local"
                 name="date"
