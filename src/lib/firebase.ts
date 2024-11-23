@@ -15,9 +15,15 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Configure Google Provider
+// Configure Google Provider with additional OAuth scopes if needed
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
+
+// Set custom parameters for the Google sign-in flow
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: 'select_account',
+  // This ensures a new window opens for auth instead of a redirect
+  display: 'popup'
 });
 
 export const db = getFirestore(app);

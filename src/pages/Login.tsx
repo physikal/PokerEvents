@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { FirebaseError } from 'firebase/app';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,7 +16,26 @@ export default function Login() {
       await signIn(email, password);
       navigate('/');
     } catch (error) {
-      toast.error('Failed to sign in');
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case 'auth/invalid-email':
+            toast.error('Invalid email address');
+            break;
+          case 'auth/user-disabled':
+            toast.error('This account has been disabled');
+            break;
+          case 'auth/user-not-found':
+            toast.error('No account found with this email');
+            break;
+          case 'auth/wrong-password':
+            toast.error('Incorrect password');
+            break;
+          default:
+            toast.error('Failed to sign in');
+        }
+      } else {
+        toast.error('Failed to sign in');
+      }
     }
   };
 
@@ -24,7 +44,23 @@ export default function Login() {
       await signInWithGoogle();
       navigate('/');
     } catch (error) {
-      toast.error('Failed to sign in with Google');
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case 'auth/popup-blocked':
+            toast.error('Please allow popups for this website');
+            break;
+          case 'auth/popup-closed-by-user':
+            toast.error('Sign in was cancelled');
+            break;
+          case 'auth/cancelled-popup-request':
+            // Ignore this error as it's not relevant to users
+            break;
+          default:
+            toast.error('Failed to sign in with Google');
+        }
+      } else {
+        toast.error('Failed to sign in with Google');
+      }
     }
   };
 
