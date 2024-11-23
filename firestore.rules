@@ -16,6 +16,11 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in eventData.currentPlayers;
     }
 
+    // Helper function to check if user is invited
+    function isInvited(eventData) {
+      return isAuthenticated() && request.auth.token.email in eventData.invitedPlayers;
+    }
+
     // Events collection rules
     match /events/{eventId} {
       allow read: if isAuthenticated();
@@ -27,15 +32,17 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         isEventOwner(resource.data) ||
         (
-          // Only allow updating currentPlayers array
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPlayers']) &&
+          // Allow updating currentPlayers and invitedPlayers arrays when invited
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentPlayers', 'invitedPlayers']) &&
+          (isEventOwner(resource.data) || isInvited(resource.data)) &&
           // Ensure other fields remain unchanged
           request.resource.data.title == resource.data.title &&
           request.resource.data.date == resource.data.date &&
           request.resource.data.location == resource.data.location &&
           request.resource.data.buyIn == resource.data.buyIn &&
           request.resource.data.maxPlayers == resource.data.maxPlayers &&
-          request.resource.data.ownerId == resource.data.ownerId
+          request.resource.data.ownerId == resource.data.ownerId &&
+          request.resource.data.status == resource.data.status
         )
       );
       

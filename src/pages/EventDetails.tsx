@@ -26,7 +26,6 @@ export default function EventDetails() {
   useEffect(() => {
     if (!id) return;
 
-    // Set up real-time listener for the event document
     const unsubscribe = onSnapshot(
       doc(db, 'events', id),
       (doc) => {
@@ -45,7 +44,6 @@ export default function EventDetails() {
       }
     );
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [id, navigate]);
 
@@ -60,6 +58,7 @@ export default function EventDetails() {
       });
       toast.success('Successfully joined the event!');
     } catch (error) {
+      console.error('Join error:', error);
       toast.error('Failed to join event');
     }
   };
@@ -74,6 +73,7 @@ export default function EventDetails() {
       });
       toast.success('Successfully left the event');
     } catch (error) {
+      console.error('Leave error:', error);
       toast.error('Failed to leave event');
     }
   };
@@ -87,6 +87,7 @@ export default function EventDetails() {
         invitedPlayers: arrayUnion(email)
       });
     } catch (error) {
+      console.error('Invite error:', error);
       throw new Error('Failed to update invited players');
     }
   };
@@ -101,6 +102,7 @@ export default function EventDetails() {
       });
       toast.success('Invitation removed');
     } catch (error) {
+      console.error('Remove invite error:', error);
       toast.error('Failed to remove invitation');
     }
   };
@@ -115,8 +117,8 @@ export default function EventDetails() {
 
   const isOwner = user?.uid === event.ownerId;
   const isParticipant = event.currentPlayers.includes(user?.uid || '');
-  const isInvited = event.invitedPlayers?.includes(user?.email || '');
   const canJoin = !isParticipant && event.currentPlayers.length < event.maxPlayers;
+  const isInvited = event.invitedPlayers?.includes(user?.email || '');
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">

@@ -1,13 +1,36 @@
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { usePokerEvents } from '../hooks/usePokerEvents';
+import { useInvitations } from '../hooks/useInvitations';
 import { useUserStats } from '../hooks/useUserStats';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Dashboard() {
   const { events: upcomingEvents, loading: eventsLoading } = usePokerEvents('upcoming');
+  const { invitations, loading: invitationsLoading } = useInvitations();
   const { stats, loading: statsLoading } = useUserStats();
+  const { user } = useAuth();
 
-  if (eventsLoading || statsLoading) {
+  const handleAcceptInvite = async (eventId: string) => {
+    if (!user) return;
+    
+    try {
+      const eventRef = doc(db, 'events', eventId);
+      await updateDoc(eventRef, {
+        currentPlayers: arrayUnion(user.uid),
+        invitedPlayers: arrayRemove(user.email)
+      });
+      toast.success('Successfully joined the event!');
+    } catch (error) {
+      console.error('Accept invitation error:', error);
+      toast.error('Failed to join event');
+    }
+  };
+
+  if (eventsLoading || statsLoading || invitationsLoading) {
     return <div>Loading...</div>;
   }
 
@@ -51,6 +74,36 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {invitations.length > 0 && (
+        <div className="card">
+          <h2 className="text-xl font-bold mb-4">Pending Invitations</h2>
+          <div className="space-y-4">
+            {invitations.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
+              >
+                <div>
+                  <h3 className="font-semibold">{event.title}</h3>
+                  <p className="text-sm text-gray-400">
+                    {format(new Date(event.date), 'PPP p')} at {event.location}
+                  </p>
+                  <p className="text-sm text-poker-red font-medium">
+                    ${event.buyIn} buy-in
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleAcceptInvite(event.id)}
+                  className="btn-primary"
+                >
+                  Accept
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold">Upcoming Events</h2>
@@ -73,7 +126,7 @@ export default function Dashboard() {
                   <div>
                     <h3 className="font-semibold text-lg">{event.title}</h3>
                     <p className="text-gray-400">
-                      {format(new Date(event.date), 'PPP')} at {event.location}
+                      {format(new Date(event.date), 'PPP p')} at {event.location}
                     </p>
                   </div>
                   <div className="text-right">
