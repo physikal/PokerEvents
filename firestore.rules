@@ -10,9 +10,9 @@ service cloud.firestore {
     function isEventOwner(eventData) {
       return isAuthenticated() && eventData.ownerId == request.auth.uid;
     }
-    
+
     // Helper function to check if user is invited to event
-    function isInvited(eventData) {
+    function isInvitedToEvent(eventData) {
       return isAuthenticated() && request.auth.token.email in eventData.invitedPlayers;
     }
 
@@ -74,8 +74,12 @@ service cloud.firestore {
 
     // Groups collection rules
     match /groups/{groupId} {
-      // Allow reading if authenticated
-      allow read: if isAuthenticated();
+      // Allow reading only if user is a member, owner, or invited
+      allow read: if isAuthenticated() && (
+        isGroupMember(resource.data) || 
+        isGroupOwner(resource.data) || 
+        isInvitedToGroup(resource.data)
+      );
       
       // Allow creating new groups
       allow create: if isAuthenticated() && 
@@ -84,9 +88,9 @@ service cloud.firestore {
       
       // Allow updates by owner or invited members accepting invitation
       allow update: if isAuthenticated() && (
-        // Only group owner can update invitedMembers
+        // Only group owner can update invitedMembers or remove members
         (isGroupOwner(resource.data) && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedMembers', 'updatedAt'])) ||
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedMembers', 'members', 'updatedAt'])) ||
         // Invited members can only accept invitations
         (isInvitedToGroup(resource.data) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'invitedMembers']) &&

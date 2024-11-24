@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, Trophy, UserPlus, Mail } from 'lucide-react';
+import { Users, Trophy, UserPlus, Mail, UserMinus } from 'lucide-react';
 import { useGroup } from '../hooks/useGroup';
 import { useGroupStats } from '../hooks/useGroupStats';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,8 @@ import LeaderboardCard from '../components/LeaderboardCard';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
+import RemoveMemberModal from '../components/RemoveMemberModal';
+import { UserInfo } from '../types';
 
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +18,7 @@ export default function GroupDetails() {
   const { group, loading: groupLoading, members } = useGroup(id!);
   const { stats, loading: statsLoading } = useGroupStats(id!);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<UserInfo | null>(null);
 
   const handleCancelInvite = async (email: string) => {
     if (!group || !isOwner) return;
@@ -30,6 +33,11 @@ export default function GroupDetails() {
       console.error('Cancel invitation error:', error);
       toast.error('Failed to cancel invitation');
     }
+  };
+
+  const handleRemoveMember = (member: UserInfo) => {
+    if (!group || !isOwner || member.id === group.ownerId) return;
+    setMemberToRemove(member);
   };
 
   if (groupLoading || statsLoading) {
@@ -118,11 +126,23 @@ export default function GroupDetails() {
                       <div className="text-sm text-gray-400">{member.email}</div>
                     )}
                   </div>
-                  {member.id === group.ownerId && (
-                    <span className="text-xs bg-poker-red px-2 py-1 rounded">
-                      Owner
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {member.id === group.ownerId ? (
+                      <span className="text-xs bg-poker-red px-2 py-1 rounded">
+                        Owner
+                      </span>
+                    ) : (
+                      isOwner && (
+                        <button
+                          onClick={() => handleRemoveMember(member)}
+                          className="text-gray-400 hover:text-red-400 transition-colors"
+                          title="Remove member"
+                        >
+                          <UserMinus size={18} />
+                        </button>
+                      )
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -134,6 +154,14 @@ export default function GroupDetails() {
         <InviteMemberModal
           group={group}
           onClose={() => setShowInviteModal(false)}
+        />
+      )}
+
+      {memberToRemove && (
+        <RemoveMemberModal
+          group={group}
+          member={memberToRemove}
+          onClose={() => setMemberToRemove(null)}
         />
       )}
     </div>
