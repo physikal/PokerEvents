@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, Trophy, UserPlus } from 'lucide-react';
+import { Users, Trophy, UserPlus, Mail } from 'lucide-react';
 import { useGroup } from '../hooks/useGroup';
 import { useGroupStats } from '../hooks/useGroupStats';
 import { useAuth } from '../contexts/AuthContext';
 import InviteMemberModal from '../components/InviteMemberModal';
 import LeaderboardCard from '../components/LeaderboardCard';
+import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { toast } from 'react-hot-toast';
 
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +16,21 @@ export default function GroupDetails() {
   const { group, loading: groupLoading, members } = useGroup(id!);
   const { stats, loading: statsLoading } = useGroupStats(id!);
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  const handleCancelInvite = async (email: string) => {
+    if (!group || !isOwner) return;
+    
+    try {
+      const groupRef = doc(db, 'groups', group.id);
+      await updateDoc(groupRef, {
+        invitedMembers: arrayRemove(email)
+      });
+      toast.success('Invitation cancelled');
+    } catch (error) {
+      console.error('Cancel invitation error:', error);
+      toast.error('Failed to cancel invitation');
+    }
+  };
 
   if (groupLoading || statsLoading) {
     return <div>Loading...</div>;
@@ -56,6 +74,31 @@ export default function GroupDetails() {
             </h2>
             <LeaderboardCard stats={stats} />
           </div>
+
+          {isOwner && group.invitedMembers.length > 0 && (
+            <div className="card">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Mail size={20} />
+                Pending Invites
+              </h2>
+              <div className="space-y-2">
+                {group.invitedMembers.map((email) => (
+                  <div
+                    key={email}
+                    className="p-3 bg-gray-800 rounded-lg flex items-center justify-between"
+                  >
+                    <span className="text-gray-300">{email}</span>
+                    <button
+                      onClick={() => handleCancelInvite(email)}
+                      className="text-sm text-red-400 hover:text-red-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
