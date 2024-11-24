@@ -11,7 +11,7 @@ service cloud.firestore {
       return isAuthenticated() && eventData.ownerId == request.auth.uid;
     }
     
-    // Helper function to check if user is invited
+    // Helper function to check if user is invited to event
     function isInvited(eventData) {
       return isAuthenticated() && request.auth.token.email in eventData.invitedPlayers;
     }
@@ -19,6 +19,21 @@ service cloud.firestore {
     // Helper function to check if user is event participant
     function isEventParticipant(eventData) {
       return isAuthenticated() && request.auth.uid in eventData.currentPlayers;
+    }
+
+    // Helper function to check if user is group owner
+    function isGroupOwner(groupData) {
+      return isAuthenticated() && groupData.ownerId == request.auth.uid;
+    }
+
+    // Helper function to check if user is group member
+    function isGroupMember(groupData) {
+      return isAuthenticated() && request.auth.uid in groupData.members;
+    }
+
+    // Helper function to check if user is invited to group
+    function isInvitedToGroup(groupData) {
+      return isAuthenticated() && request.auth.token.email in groupData.invitedMembers;
     }
 
     // User profiles
@@ -55,6 +70,37 @@ service cloud.firestore {
       );
       
       allow delete: if isEventOwner(resource.data);
+    }
+
+    // Groups collection rules
+    match /groups/{groupId} {
+      // Allow reading if authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow creating new groups
+      allow create: if isAuthenticated() && 
+        request.resource.data.ownerId == request.auth.uid &&
+        request.auth.uid in request.resource.data.members;
+      
+      // Allow updates by owner or invited members accepting invitation
+      allow update: if isAuthenticated() && (
+        // Only group owner can update invitedMembers
+        (isGroupOwner(resource.data) && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['invitedMembers', 'updatedAt'])) ||
+        // Invited members can only accept invitations
+        (isInvitedToGroup(resource.data) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'invitedMembers']) &&
+         request.resource.data.members.hasOnly(resource.data.members.concat([request.auth.uid])) &&
+         request.resource.data.invitedMembers.hasOnly(resource.data.invitedMembers.removeAll([request.auth.token.email])) &&
+         request.resource.data.name == resource.data.name &&
+         request.resource.data.description == resource.data.description &&
+         request.resource.data.ownerId == resource.data.ownerId &&
+         request.resource.data.createdAt == resource.data.createdAt &&
+         request.resource.data.updatedAt == resource.data.updatedAt)
+      );
+      
+      // Allow deletion by owner
+      allow delete: if isGroupOwner(resource.data);
     }
   }
 }

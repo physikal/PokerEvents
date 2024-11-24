@@ -7,11 +7,15 @@ import { useInvitations } from '../hooks/useInvitations';
 import { useUserStats } from '../hooks/useUserStats';
 import { useAuth } from '../contexts/AuthContext';
 import { formatToPacific } from '../utils/dateUtils';
+import { Users, Crown, Mail } from 'lucide-react';
+import { useGroups } from '../hooks/useGroups';
+import { PokerEvent } from '../types';
 
 export default function Dashboard() {
   const { events: upcomingEvents, loading: eventsLoading } = usePokerEvents('upcoming');
   const { invitations, loading: invitationsLoading } = useInvitations();
   const { stats, loading: statsLoading } = useUserStats();
+  const { groups } = useGroups();
   const { user } = useAuth();
 
   const handleAcceptInvite = async (eventId: string) => {
@@ -29,6 +33,51 @@ export default function Dashboard() {
       toast.error('Failed to join event');
     }
   };
+
+  // Categorize events
+  const categorizedEvents = upcomingEvents.reduce((acc, event) => {
+    if (event.ownerId === user?.uid) {
+      acc.hosting.push(event);
+    } else if (event.groupId) {
+      acc.group.push(event);
+    } else {
+      acc.individual.push(event);
+    }
+    return acc;
+  }, {
+    hosting: [] as PokerEvent[],
+    group: [] as PokerEvent[],
+    individual: [] as PokerEvent[]
+  });
+
+  const renderEventCard = (event: PokerEvent) => (
+    <Link
+      key={event.id}
+      to={`/event/${event.id}`}
+      className="block card hover:bg-gray-800 transition-colors"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-lg">{event.title}</h3>
+          <p className="text-gray-400">
+            {formatToPacific(event.date)} at {event.location}
+          </p>
+          {event.groupId && (
+            <div className="mt-1 flex items-center gap-1 text-sm text-poker-gold">
+              <Users size={14} />
+              {groups.find(g => g.id === event.groupId)?.name || 'Group Event'}
+            </div>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-poker-red font-semibold">${event.buyIn}</p>
+          <p className="text-gray-400">
+            {event.currentPlayers.length}/{event.maxPlayers} players
+          </p>
+        </div>
+      </div>
+    </Link>
+  );
 
   if (eventsLoading || statsLoading || invitationsLoading) {
     return <div>Loading...</div>;
@@ -67,7 +116,10 @@ export default function Dashboard() {
 
       {invitations.length > 0 && (
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Pending Invitations</h2>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Mail size={20} />
+            Pending Invitations
+          </h2>
           <div className="space-y-4">
             {invitations.map((event) => (
               <div
@@ -82,6 +134,12 @@ export default function Dashboard() {
                   <p className="text-sm text-poker-red font-medium">
                     ${event.buyIn} buy-in
                   </p>
+                  {event.groupId && (
+                    <div className="mt-1 flex items-center gap-1 text-sm text-poker-gold">
+                      <Users size={14} />
+                      {groups.find(g => g.id === event.groupId)?.name || 'Group Event'}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => handleAcceptInvite(event.id)}
@@ -106,29 +164,42 @@ export default function Dashboard() {
         {upcomingEvents.length === 0 ? (
           <p className="text-gray-400 text-center py-8">No upcoming events. Create one to get started!</p>
         ) : (
-          <div className="space-y-4">
-            {upcomingEvents.map((event) => (
-              <Link
-                key={event.id}
-                to={`/event/${event.id}`}
-                className="block card hover:bg-gray-800 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">{event.title}</h3>
-                    <p className="text-gray-400">
-                      {formatToPacific(event.date)} at {event.location}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-poker-red font-semibold">${event.buyIn}</p>
-                    <p className="text-gray-400">
-                      {event.currentPlayers.length}/{event.maxPlayers} players
-                    </p>
-                  </div>
+          <div className="space-y-8">
+            {/* Events you're hosting */}
+            {categorizedEvents.hosting.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-poker-gold">
+                  <Crown size={20} />
+                  Events You're Hosting
+                </h3>
+                <div className="space-y-4">
+                  {categorizedEvents.hosting.map(renderEventCard)}
                 </div>
-              </Link>
-            ))}
+              </div>
+            )}
+
+            {/* Group events */}
+            {categorizedEvents.group.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-blue-400">
+                  <Users size={20} />
+                  Group Events
+                </h3>
+                <div className="space-y-4">
+                  {categorizedEvents.group.map(renderEventCard)}
+                </div>
+              </div>
+            )}
+
+            {/* Individual events */}
+            {categorizedEvents.individual.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Individual Events</h3>
+                <div className="space-y-4">
+                  {categorizedEvents.individual.map(renderEventCard)}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

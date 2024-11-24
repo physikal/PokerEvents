@@ -1,55 +1,159 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { toPacificISOString } from '../utils/dateUtils';
+import { toPacificISOString, formatToPacific } from '../utils/dateUtils';
+import PreviousAttendees from '../components/PreviousAttendees';
+import { sendInvitationEmail } from '../lib/emailService';
+import { UserInfo } from '../types';
+import { useGroups } from '../hooks/useGroups';
+import { Users } from 'lucide-react';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { groups } = useGroups();
   const [formData, setFormData] = useState({
     title: '',
     date: '',
     location: '',
     buyIn: '',
     maxPlayers: '',
+    groupId: '',
   });
+  const [selectedAttendees, setSelectedAttendees] = useState<UserInfo[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const validateForm = () => {
+    if (!formData.title.trim()) throw new Error('Event title is required');
+    if (!formData.date) throw new Error('Event date is required');
+    if (!formData.location.trim()) throw new Error('Location is required');
+    if (!formData.buyIn || Number(formData.buyIn) < 0) throw new Error('Valid buy-in amount is required');
+    if (!formData.maxPlayers || Number(formData.maxPlayers) < 2) throw new Error('Maximum players must be at least 2');
+
+    const eventDate = new Date(formData.date);
+    if (isNaN(eventDate.getTime())) throw new Error('Invalid date format');
+    if (eventDate < new Date()) throw new Error('Event date must be in the future');
+
+    return eventDate;
+  };
+
+  const fetchGroupMembers = async (groupId: string): Promise<UserInfo[]> => {
+    const selectedGroup = groups.find(g => g.id === groupId);
+    if (!selectedGroup) return [];
+
     try {
-      const eventData = {
-        ...formData,
-        date: toPacificISOString(new Date(formData.date)),
-        buyIn: Number(formData.buyIn),
-        maxPlayers: Number(formData.maxPlayers),
-        currentPlayers: [user!.uid],
-        invitedPlayers: [],
-        ownerId: user!.uid,
-        status: 'upcoming',
-        createdAt: toPacificISOString(new Date()),
-      };
-
-      const docRef = await addDoc(collection(db, 'events'), eventData);
-      toast.success('Event created successfully!');
-      navigate(`/event/${docRef.id}`);
+      const usersRef = collection(db, 'users');
+      const q = query(
+        usersRef,
+        where('__name__', 'in', selectedGroup.members.filter(id => id !== user?.uid))
+      );
+      const querySnapshot = await getDocs(q);
+      
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        email: doc.data().email || '',
+        displayName: doc.data().displayName,
+      }));
     } catch (error) {
-      toast.error('Failed to create event');
+      console.error('Error fetching group members:', error);
+      throw new Error('Failed to fetch group members');
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const eventDate = validateForm();
+
+      // Get group members if a group is selected
+      let groupMembers: UserInfo[] = [];
+      if (formData.groupId) {
+        groupMembers = await fetchGroupMembers(formData.groupId);
+      }
+
+      // Combine selected attendees and group members
+      const allAttendees = [...selectedAttendees];
+      groupMembers.forEach(member => {
+        if (!allAttendees.some(a => a.id === member.id)) {
+          allAttendees.push(member);
+        }
+      });
+
+      // Create event
+      const eventData = {
+        title: formData.title.trim(),
+        date: toPacificISOString(eventDate),
+        location: formData.location.trim(),
+        buyIn: Number(formData.buyIn),
+        maxPlayers: Number(formData.maxPlayers),
+        currentPlayers: [user.uid],
+        invitedPlayers: allAttendees.map(a => a.email),
+        ownerId: user.uid,
+        status: 'upcoming',
+        createdAt: toPacificISOString(new Date()),
+        groupId: formData.groupId || null,
+      };
+
+      const docRef = await addDoc(collection(db, 'events'), eventData);
+      
+      // Generate event URL
+      const baseUrl = window.location.origin;
+      const eventUrl = `${baseUrl}/#/event/${docRef.id}`;
+
+      // Send email notifications to all attendees
+      if (allAttendees.length > 0) {
+        await Promise.all(allAttendees.map(attendee => 
+          sendInvitationEmail({
+            to_email: attendee.email,
+            event_title: eventData.title,
+            event_date: formatToPacific(eventDate),
+            event_location: eventData.location,
+            event_buyin: eventData.buyIn,
+            event_link: eventUrl,
+            reply_to: user.email || 'noreply@suckingout.com'
+          }).catch(error => {
+            console.error(`Failed to send email to ${attendee.email}:`, error);
+            // Don't throw, just log the error and continue
+          })
+        ));
+      }
+
+      toast.success('Event created successfully!');
+      navigate(`/event/${docRef.id}`);
+    } catch (error) {
+      console.error('Create event error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create event');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
   };
 
+  const handleAttendeeToggle = (attendee: UserInfo) => {
+    setSelectedAttendees(prev => {
+      const isSelected = prev.some(a => a.id === attendee.id);
+      if (isSelected) {
+        return prev.filter(a => a.id !== attendee.id);
+      }
+      return [...prev, attendee];
+    });
+  };
+
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-8">
       <div className="card">
         <h2 className="text-2xl font-bold mb-6">Create New Poker Night</h2>
         
@@ -66,6 +170,31 @@ export default function CreateEvent() {
               required
             />
           </div>
+
+          {groups.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-2">
+                <Users size={16} />
+                Group (Optional)
+              </label>
+              <select
+                name="groupId"
+                className="input w-full"
+                value={formData.groupId}
+                onChange={handleChange}
+              >
+                <option value="">Select a group</option>
+                {groups.map(group => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-sm text-gray-400">
+                All group members will be automatically invited
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -128,15 +257,30 @@ export default function CreateEvent() {
               type="button"
               onClick={() => navigate('/')}
               className="btn-secondary"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
-            <button type="submit" className="btn-primary">
-              Create Event
+            <button 
+              type="submit" 
+              className="btn-primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Event'}
             </button>
           </div>
         </form>
       </div>
+
+      {user && (
+        <div className="card">
+          <PreviousAttendees
+            currentUserId={user.uid}
+            onSelect={handleAttendeeToggle}
+            selectedAttendees={selectedAttendees.map(a => a.id)}
+          />
+        </div>
+      )}
     </div>
   );
 }

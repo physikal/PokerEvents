@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, History, LayoutDashboard } from 'lucide-react';
+import { User, History, LayoutDashboard, Users } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -22,6 +22,13 @@ export default function Navbar() {
             >
               <LayoutDashboard size={18} />
               Dashboard
+            </Link>
+            <Link 
+              to="/groups" 
+              className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+            >
+              <Users size={18} />
+              Groups
             </Link>
             <Link 
               to="/history" 
