@@ -6,16 +6,18 @@ import { usePokerEvents } from '../hooks/usePokerEvents';
 import { useInvitations } from '../hooks/useInvitations';
 import { useUserStats } from '../hooks/useUserStats';
 import { useAuth } from '../contexts/AuthContext';
-import { formatToPacific } from '../utils/dateUtils';
 import { Users, Crown, Mail } from 'lucide-react';
 import { useGroups } from '../hooks/useGroups';
+import { useGroupInvites } from '../hooks/useGroupInvites';
 import { PokerEvent } from '../types';
+import { formatToPacific } from '../utils/dateUtils';
 
 export default function Dashboard() {
   const { events: upcomingEvents, loading: eventsLoading } = usePokerEvents('upcoming');
   const { invitations, loading: invitationsLoading } = useInvitations();
   const { stats, loading: statsLoading } = useUserStats();
   const { groups } = useGroups();
+  const { invites: groupInvites, loading: groupInvitesLoading } = useGroupInvites();
   const { user } = useAuth();
 
   const handleAcceptInvite = async (eventId: string) => {
@@ -31,6 +33,22 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Accept invitation error:', error);
       toast.error('Failed to join event');
+    }
+  };
+
+  const handleAcceptGroupInvite = async (groupId: string) => {
+    if (!user?.email) return;
+    
+    try {
+      const groupRef = doc(db, 'groups', groupId);
+      await updateDoc(groupRef, {
+        members: arrayUnion(user.uid),
+        invitedMembers: arrayRemove(user.email)
+      });
+      toast.success('Successfully joined the group!');
+    } catch (error) {
+      console.error('Accept group invitation error:', error);
+      toast.error('Failed to join group');
     }
   };
 
@@ -79,9 +97,11 @@ export default function Dashboard() {
     </Link>
   );
 
-  if (eventsLoading || statsLoading || invitationsLoading) {
+  if (eventsLoading || statsLoading || invitationsLoading || groupInvitesLoading) {
     return <div>Loading...</div>;
   }
+
+  const hasInvites = invitations.length > 0 || groupInvites.length > 0;
 
   return (
     <div className="space-y-8">
@@ -114,41 +134,74 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {invitations.length > 0 && (
+      {hasInvites && (
         <div className="card">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
             <Mail size={20} />
             Pending Invitations
           </h2>
-          <div className="space-y-4">
-            {invitations.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
-              >
-                <div>
-                  <h3 className="font-semibold">{event.title}</h3>
-                  <p className="text-sm text-gray-400">
-                    {formatToPacific(event.date)} at {event.location}
-                  </p>
-                  <p className="text-sm text-poker-red font-medium">
-                    ${event.buyIn} buy-in
-                  </p>
-                  {event.groupId && (
-                    <div className="mt-1 flex items-center gap-1 text-sm text-poker-gold">
-                      <Users size={14} />
-                      {groups.find(g => g.id === event.groupId)?.name || 'Group Event'}
+
+          <div className="space-y-6">
+            {/* Event Invitations */}
+            {invitations.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Events</h3>
+                {invitations.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-semibold">{event.title}</h3>
+                      <p className="text-sm text-gray-400">
+                        {formatToPacific(event.date)} at {event.location}
+                      </p>
+                      <p className="text-sm text-poker-red font-medium">
+                        ${event.buyIn} buy-in
+                      </p>
+                      {event.groupId && (
+                        <div className="mt-1 flex items-center gap-1 text-sm text-poker-gold">
+                          <Users size={14} />
+                          {groups.find(g => g.id === event.groupId)?.name || 'Group Event'}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleAcceptInvite(event.id)}
-                  className="btn-primary"
-                >
-                  Accept
-                </button>
+                    <button
+                      onClick={() => handleAcceptInvite(event.id)}
+                      className="btn-primary"
+                    >
+                      Accept
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+
+            {/* Group Invitations */}
+            {groupInvites.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Groups</h3>
+                {groupInvites.map((group) => (
+                  <div
+                    key={group.id}
+                    className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-semibold">{group.name}</h3>
+                      {group.description && (
+                        <p className="text-sm text-gray-400 mt-1">{group.description}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleAcceptGroupInvite(group.id)}
+                      className="btn-primary"
+                    >
+                      Accept
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

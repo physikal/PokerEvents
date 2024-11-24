@@ -5,7 +5,7 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     // Helper function to check if user is event owner
     function isEventOwner(eventData) {
       return isAuthenticated() && eventData.ownerId == request.auth.uid;
@@ -86,10 +86,20 @@ service cloud.firestore {
         request.resource.data.ownerId == request.auth.uid &&
         request.auth.uid in request.resource.data.members;
       
-      // Allow updates by owner or members
+      // Allow updates by owner or invited members joining
       allow update: if isAuthenticated() && (
         // Group owner can update any field
         isGroupOwner(resource.data) ||
+        // Invited members can join
+        (isInvitedToGroup(resource.data) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'invitedMembers']) &&
+         request.resource.data.members == resource.data.members.concat([request.auth.uid]) &&
+         request.resource.data.invitedMembers == resource.data.invitedMembers.removeAll([request.auth.token.email]) &&
+         request.resource.data.name == resource.data.name &&
+         request.resource.data.description == resource.data.description &&
+         request.resource.data.ownerId == resource.data.ownerId &&
+         request.resource.data.createdAt == resource.data.createdAt &&
+         request.resource.data.updatedAt == resource.data.updatedAt) ||
         // Members can remove themselves
         (isGroupMember(resource.data) &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']) &&
