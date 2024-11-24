@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Users, Trophy, UserPlus, Mail, UserMinus } from 'lucide-react';
 import { useGroup } from '../hooks/useGroup';
 import { useGroupStats } from '../hooks/useGroupStats';
@@ -14,11 +14,33 @@ import { UserInfo } from '../types';
 
 export default function GroupDetails() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { group, loading: groupLoading, members } = useGroup(id!);
+  const { group, loading: groupLoading, members, error } = useGroup(id!);
   const { stats, loading: statsLoading } = useGroupStats(id!);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<UserInfo | null>(null);
+
+  // Check if user has access to this group
+  useEffect(() => {
+    if (!groupLoading && group && user) {
+      const hasAccess = group.members.includes(user.uid) || 
+                       (user.email && group.invitedMembers.includes(user.email));
+      
+      if (!hasAccess) {
+        toast.error('You do not have access to this group');
+        navigate('/groups');
+      }
+    }
+  }, [group, user, navigate, groupLoading]);
+
+  // Handle API errors
+  useEffect(() => {
+    if (error) {
+      toast.error('Failed to load group details');
+      navigate('/groups');
+    }
+  }, [error, navigate]);
 
   const handleCancelInvite = async (email: string) => {
     if (!group || !isOwner) return;
@@ -44,11 +66,17 @@ export default function GroupDetails() {
     return <div>Loading...</div>;
   }
 
-  if (!group) {
-    return <div>Group not found</div>;
+  if (!group || !user) {
+    return null;
   }
 
-  const isOwner = user?.uid === group.ownerId;
+  const isOwner = user.uid === group.ownerId;
+  const isMember = group.members.includes(user.uid);
+
+  // If user is not a member or owner, don't show anything
+  if (!isMember && !isOwner) {
+    return null;
+  }
 
   return (
     <div className="space-y-8">
