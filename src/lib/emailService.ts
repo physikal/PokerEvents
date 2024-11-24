@@ -1,7 +1,8 @@
 import emailjs from '@emailjs/browser';
+import { EMAIL_CONFIG } from '../config/email';
 
-// Initialize EmailJS with public key from environment variables
-emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
+// Initialize EmailJS with public key
+emailjs.init(EMAIL_CONFIG.PUBLIC_KEY);
 
 interface EmailTemplate {
   to_email: string;
@@ -31,8 +32,8 @@ interface CancellationTemplate {
 export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
   try {
     const response = await emailjs.send(
-      import.meta.env.VITE_EMAILJS_SERVICE_ID,
-      import.meta.env.VITE_EMAILJS_EVENT_TEMPLATE_ID,
+      EMAIL_CONFIG.SERVICE_ID,
+      EMAIL_CONFIG.TEMPLATES.EVENT_INVITE,
       {
         ...templateParams,
         app_name: 'Poker Nights',
@@ -49,8 +50,8 @@ export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
 export const sendGroupInvitation = async (templateParams: GroupInviteTemplate) => {
   try {
     const response = await emailjs.send(
-      import.meta.env.VITE_EMAILJS_SERVICE_ID,
-      import.meta.env.VITE_EMAILJS_GROUP_TEMPLATE_ID,
+      EMAIL_CONFIG.SERVICE_ID,
+      EMAIL_CONFIG.TEMPLATES.GROUP_INVITE,
       {
         ...templateParams,
         app_name: 'Poker Nights',
@@ -69,8 +70,8 @@ export const sendCancellationEmails = async (params: CancellationTemplate) => {
     // Send emails to all participants and invited players
     const emailPromises = params.to_emails.map(email => 
       emailjs.send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_CANCEL_TEMPLATE_ID,
+        EMAIL_CONFIG.SERVICE_ID,
+        EMAIL_CONFIG.TEMPLATES.EVENT_CANCEL,
         {
           to_email: email,
           event_title: params.event_title,
