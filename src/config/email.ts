@@ -5,6 +5,6 @@ export const EMAIL_CONFIG = {
   TEMPLATES: {
     EVENT_INVITE: 'template_g5fi4ts',
     EVENT_CANCEL: 'template_25uo227',
-    GROUP_INVITE: 'template_g5fi4ts'
+    GROUP_INVITE: 'template_9m4iwce'
   }
 };
