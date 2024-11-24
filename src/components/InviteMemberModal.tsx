@@ -23,33 +23,25 @@ export default function InviteMemberModal({ group, onClose }: InviteMemberModalP
 
     setSending(true);
     try {
-      // First update Firestore
       const groupRef = doc(db, 'groups', group.id);
       await updateDoc(groupRef, {
         invitedMembers: arrayUnion(email.toLowerCase())
       });
 
-      // Then try to send the email notification
-      try {
-        // Generate the absolute URL for the groups page
-        const baseUrl = window.location.origin;
-        const groupUrl = `${baseUrl}/#/groups`;
+      // Generate the absolute URL for the groups page
+      const baseUrl = window.location.origin;
+      const groupUrl = `${baseUrl}/#/groups`;
 
-        await sendGroupInvitation({
-          to_email: email,
-          group_name: group.name,
-          inviter_name: user.displayName || user.email || 'A poker player',
-          group_link: groupUrl,
-          reply_to: user.email || 'noreply@suckingout.com'
-        });
+      // Send invitation email
+      await sendGroupInvitation({
+        to_email: email,
+        group_name: group.name,
+        inviter_name: user.displayName || user.email || 'A poker player',
+        group_link: groupUrl,
+        reply_to: user.email || 'noreply@suckingout.com'
+      });
 
-        toast.success(`Invitation sent to ${email}`);
-      } catch (emailError) {
-        // Log the error but don't fail the invitation process
-        console.error('Failed to send email notification:', emailError);
-        toast.success(`Invitation sent to ${email} (email notification failed)`);
-      }
-
+      toast.success(`Invitation sent to ${email}`);
       setEmail('');
       onClose();
     } catch (error) {
