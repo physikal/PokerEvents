@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { PokerEvent } from '../types';
-
-interface UserInfo {
-  id: string;
-  displayName?: string;
-  email: string;
-}
+import { PokerEvent, UserInfo } from '../types';
 
 interface WinnerModalProps {
   event: PokerEvent;
@@ -37,30 +31,21 @@ export default function WinnerModal({ event, participants, onClose, onSetWinners
     },
   });
 
-  const totalPrizePool = event.buyIn * event.currentPlayers.length;
   const [error, setError] = useState('');
 
-  const validatePrizes = (formData: WinnerForm) => {
+  const validateWinners = (formData: WinnerForm) => {
     const prizes = [
       Number(formData.first.prize) || 0,
       Number(formData.second.prize) || 0,
       Number(formData.third.prize) || 0
     ];
 
-    const validPrizes = prizes.filter(prize => prize > 0);
-    if (validPrizes.length > 0) {
-      const totalPrizes = validPrizes.reduce((sum, prize) => sum + prize, 0);
-      if (totalPrizes > totalPrizePool) {
-        return 'Total prizes cannot exceed the prize pool';
-      }
+    if (prizes[0] && prizes[1] && prizes[0] <= prizes[1]) {
+      return '1st place prize must be greater than 2nd place';
+    }
 
-      if (prizes[0] && prizes[1] && prizes[0] <= prizes[1]) {
-        return '1st place prize must be greater than 2nd place';
-      }
-
-      if (prizes[1] && prizes[2] && prizes[1] <= prizes[2]) {
-        return '2nd place prize must be greater than 3rd place';
-      }
+    if (prizes[1] && prizes[2] && prizes[1] <= prizes[2]) {
+      return '2nd place prize must be greater than 3rd place';
     }
 
     return '';
@@ -69,7 +54,7 @@ export default function WinnerModal({ event, participants, onClose, onSetWinners
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const validationError = validatePrizes(winners);
+    const validationError = validateWinners(winners);
     if (validationError) {
       setError(validationError);
       return;
@@ -77,29 +62,29 @@ export default function WinnerModal({ event, participants, onClose, onSetWinners
 
     const formattedWinners: PokerEvent['winners'] = {};
 
-    if (winners.first.userId && winners.first.prize) {
+    if (winners.first.userId) {
       formattedWinners.first = {
         userId: winners.first.userId,
-        prize: Number(winners.first.prize)
+        prize: Number(winners.first.prize) || 0
       };
     }
 
-    if (winners.second.userId && winners.second.prize) {
+    if (winners.second.userId) {
       formattedWinners.second = {
         userId: winners.second.userId,
-        prize: Number(winners.second.prize)
+        prize: Number(winners.second.prize) || 0
       };
     }
 
-    if (winners.third.userId && winners.third.prize) {
+    if (winners.third.userId) {
       formattedWinners.third = {
         userId: winners.third.userId,
-        prize: Number(winners.third.prize)
+        prize: Number(winners.third.prize) || 0
       };
     }
 
     if (Object.keys(formattedWinners).length === 0) {
-      setError('Please set at least one winner with a prize');
+      setError('Please select at least one winner');
       return;
     }
 
@@ -146,7 +131,6 @@ export default function WinnerModal({ event, participants, onClose, onSetWinners
         </button>
 
         <h2 className="text-xl font-bold mb-6">Set Winners</h2>
-        <p className="text-gray-400 mb-6">Total Prize Pool: ${totalPrizePool}</p>
 
         {error && (
           <div className="mb-6 p-3 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
@@ -183,7 +167,6 @@ export default function WinnerModal({ event, participants, onClose, onSetWinners
                   value={winners[place].prize}
                   onChange={(e) => handleWinnerChange(place, 'prize', e.target.value)}
                   min="0"
-                  max={totalPrizePool}
                 />
               </div>
             </div>

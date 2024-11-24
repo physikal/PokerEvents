@@ -115,7 +115,7 @@ export default function Dashboard() {
           </div>
         </div>
         
-        <div className="card bg-gradient-to-br from-poker-gold to-yellow-600">
+        <div className="card bg-gradient-to-br from-gray-100 to-gray-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-900">Wins</p>

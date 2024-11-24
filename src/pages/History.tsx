@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trophy } from 'lucide-react';
 import { usePokerEvents } from '../hooks/usePokerEvents';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,7 +13,48 @@ export default function History() {
   const { events: pastEvents, loading } = usePokerEvents('past');
   const { user } = useAuth();
   const [selectedEvent, setSelectedEvent] = useState<PokerEvent | null>(null);
-  const [participants, setParticipants] = useState<UserInfo[]>([]);
+  const [participants, setParticipants] = useState<Record<string, UserInfo>>({});
+
+  // Fetch all unique participant details across all events
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      try {
+        // Collect unique player IDs from all events
+        const playerIds = new Set<string>();
+        pastEvents.forEach(event => {
+          event.currentPlayers.forEach(id => playerIds.add(id));
+          if (event.winners) {
+            if (event.winners.first) playerIds.add(event.winners.first.userId);
+            if (event.winners.second) playerIds.add(event.winners.second.userId);
+            if (event.winners.third) playerIds.add(event.winners.third.userId);
+          }
+        });
+
+        if (playerIds.size > 0) {
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('__name__', 'in', Array.from(playerIds)));
+          const userSnap = await getDocs(q);
+          
+          const participantsMap: Record<string, UserInfo> = {};
+          userSnap.docs.forEach(doc => {
+            participantsMap[doc.id] = {
+              id: doc.id,
+              email: doc.data().email || '',
+              displayName: doc.data().displayName,
+            };
+          });
+          
+          setParticipants(participantsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching participants:', error);
+      }
+    };
+
+    if (pastEvents.length > 0) {
+      fetchParticipants();
+    }
+  }, [pastEvents]);
 
   const handleSetWinners = async (winners: PokerEvent['winners']) => {
     if (!selectedEvent) return;
@@ -32,27 +73,8 @@ export default function History() {
     }
   };
 
-  const handleOpenWinnerModal = async (event: PokerEvent) => {
-    try {
-      // Fetch participant details
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('__name__', 'in', event.currentPlayers));
-      const userSnap = await getDocs(q);
-      const usersList = userSnap.docs.map(doc => ({
-        id: doc.id,
-        email: doc.data().email || '',
-        displayName: doc.data().displayName,
-      }));
-      setParticipants(usersList);
-      setSelectedEvent(event);
-    } catch (error) {
-      console.error('Error fetching participants:', error);
-      toast.error('Failed to load participant details');
-    }
-  };
-
   const getParticipantName = (userId: string) => {
-    const participant = participants.find(p => p.id === userId);
+    const participant = participants[userId];
     return participant?.displayName || participant?.email || userId;
   };
 
@@ -91,7 +113,7 @@ export default function History() {
                 <div className="mt-4 md:mt-0 md:ml-8 flex-shrink-0">
                   {event.ownerId === user?.uid && (
                     <button
-                      onClick={() => handleOpenWinnerModal(event)}
+                      onClick={() => setSelectedEvent(event)}
                       className="btn-primary flex items-center gap-2"
                     >
                       <Trophy size={18} />
@@ -131,7 +153,7 @@ export default function History() {
       {selectedEvent && (
         <WinnerModal
           event={selectedEvent}
-          participants={participants}
+          participants={Object.values(participants)}
           onClose={() => setSelectedEvent(null)}
           onSetWinners={handleSetWinners}
         />
