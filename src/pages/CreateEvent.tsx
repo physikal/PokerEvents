@@ -244,7 +244,6 @@ export default function CreateEvent() {
                 className="input w-full"
                 placeholder="9"
                 min="2"
-                max="20"
                 value={formData.maxPlayers}
                 onChange={handleChange}
                 required

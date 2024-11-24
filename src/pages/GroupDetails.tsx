@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Trophy, UserPlus, Mail, UserMinus } from 'lucide-react';
+import { Users, Trophy, UserPlus, Mail, UserMinus, LogOut } from 'lucide-react';
 import { useGroup } from '../hooks/useGroup';
 import { useGroupStats } from '../hooks/useGroupStats';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,7 @@ import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
 import RemoveMemberModal from '../components/RemoveMemberModal';
+import LeaveGroupModal from '../components/LeaveGroupModal';
 import { UserInfo } from '../types';
 
 export default function GroupDetails() {
@@ -20,6 +21,7 @@ export default function GroupDetails() {
   const { stats, loading: statsLoading } = useGroupStats(id!);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<UserInfo | null>(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   // Check if user has access to this group
   useEffect(() => {
@@ -90,15 +92,26 @@ export default function GroupDetails() {
             <p className="text-gray-400 mt-2">{group.description}</p>
           )}
         </div>
-        {isOwner && (
-          <button
-            onClick={() => setShowInviteModal(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <UserPlus size={18} />
-            Invite Members
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {!isOwner && (
+            <button
+              onClick={() => setShowLeaveModal(true)}
+              className="btn-secondary flex items-center gap-2 text-red-400 hover:text-white"
+            >
+              <LogOut size={18} />
+              Leave Group
+            </button>
+          )}
+          {isOwner && (
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <UserPlus size={18} />
+              Invite Members
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -190,6 +203,13 @@ export default function GroupDetails() {
           group={group}
           member={memberToRemove}
           onClose={() => setMemberToRemove(null)}
+        />
+      )}
+
+      {showLeaveModal && (
+        <LeaveGroupModal
+          group={group}
+          onClose={() => setShowLeaveModal(false)}
         />
       )}
     </div>
