@@ -2,20 +2,26 @@ import { useState, useEffect } from 'react';
 import { Trophy } from 'lucide-react';
 import { usePokerEvents } from '../hooks/usePokerEvents';
 import { useAuth } from '../contexts/AuthContext';
-import WinnerModal from '../components/WinnerModal';
 import { PokerEvent, UserInfo } from '../types';
+import WinnerModal from '../components/WinnerModal';
 import { formatToPacific } from '../utils/dateUtils';
 import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
 
+interface EventWithParticipants extends PokerEvent {
+  participantNames: Record<string, string>;
+}
+
 export default function History() {
-  const { events: pastEvents, loading } = usePokerEvents('past');
+  const { events: pastEvents, loading: eventsLoading } = usePokerEvents('past');
   const { user } = useAuth();
   const [selectedEvent, setSelectedEvent] = useState<PokerEvent | null>(null);
   const [participants, setParticipants] = useState<Record<string, UserInfo>>({});
+  const [processedEvents, setProcessedEvents] = useState<EventWithParticipants[]>([]);
+  const [isReady, setIsReady] = useState(false);
 
-  // Fetch all unique participant details across all events
+  // Process events and participant data
   useEffect(() => {
     const fetchParticipants = async () => {
       try {
@@ -45,16 +51,36 @@ export default function History() {
           });
           
           setParticipants(participantsMap);
+
+          // Process events with participant names
+          const processed = pastEvents.map(event => ({
+            ...event,
+            participantNames: Object.keys(participantsMap).reduce((acc, userId) => ({
+              ...acc,
+              [userId]: participantsMap[userId].displayName || participantsMap[userId].email || userId
+            }), {})
+          }));
+          
+          setProcessedEvents(processed);
+        } else {
+          setProcessedEvents(pastEvents.map(event => ({
+            ...event,
+            participantNames: {}
+          })));
         }
+        setIsReady(true);
       } catch (error) {
         console.error('Error fetching participants:', error);
+        setIsReady(true);
       }
     };
 
-    if (pastEvents.length > 0) {
+    if (!eventsLoading && pastEvents.length > 0) {
       fetchParticipants();
+    } else if (!eventsLoading) {
+      setIsReady(true);
     }
-  }, [pastEvents]);
+  }, [pastEvents, eventsLoading]);
 
   const handleSetWinners = async (winners: PokerEvent['winners']) => {
     if (!selectedEvent) return;
@@ -73,12 +99,7 @@ export default function History() {
     }
   };
 
-  const getParticipantName = (userId: string) => {
-    const participant = participants[userId];
-    return participant?.displayName || participant?.email || userId;
-  };
-
-  if (loading) {
+  if (eventsLoading || !isReady) {
     return <div>Loading...</div>;
   }
 
@@ -88,14 +109,14 @@ export default function History() {
         <h1 className="text-2xl font-bold">Event History</h1>
       </div>
 
-      {pastEvents.length === 0 ? (
+      {processedEvents.length === 0 ? (
         <div className="card text-center py-12">
           <p className="text-gray-400">No past events found</p>
           <p className="text-sm text-gray-500">Join or create an event to start your poker journey!</p>
         </div>
       ) : (
         <div className="grid gap-6">
-          {pastEvents.map((event) => (
+          {processedEvents.map((event) => (
             <div key={event.id} className="card">
               <div className="flex flex-col md:flex-row justify-between">
                 <div className="space-y-4">
@@ -127,17 +148,17 @@ export default function History() {
                       <div className="space-y-2">
                         {event.winners.first && (
                           <div className="text-poker-gold">
-                            1st - {getParticipantName(event.winners.first.userId)} (${event.winners.first.prize})
+                            1st - {event.participantNames[event.winners.first.userId]} (${event.winners.first.prize})
                           </div>
                         )}
                         {event.winners.second && (
                           <div className="text-gray-400">
-                            2nd - {getParticipantName(event.winners.second.userId)} (${event.winners.second.prize})
+                            2nd - {event.participantNames[event.winners.second.userId]} (${event.winners.second.prize})
                           </div>
                         )}
                         {event.winners.third && (
                           <div className="text-amber-700">
-                            3rd - {getParticipantName(event.winners.third.userId)} (${event.winners.third.prize})
+                            3rd - {event.participantNames[event.winners.third.userId]} (${event.winners.third.prize})
                           </div>
                         )}
                       </div>

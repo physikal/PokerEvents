@@ -1,9 +1,10 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
 import RequireProfile from './components/RequireProfile';
+import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -22,9 +23,10 @@ function App() {
           <Navbar />
           <div className="container mx-auto px-4 py-8">
             <Routes>
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/" element={<PrivateRoute><RequireProfile><Dashboard /></RequireProfile></PrivateRoute>} />
+              <Route path="/dashboard" element={<PrivateRoute><RequireProfile><Dashboard /></RequireProfile></PrivateRoute>} />
               <Route path="/history" element={<PrivateRoute><RequireProfile><History /></RequireProfile></PrivateRoute>} />
               <Route path="/create-event" element={<PrivateRoute><RequireProfile><CreateEvent /></RequireProfile></PrivateRoute>} />
               <Route path="/event/:id" element={<PrivateRoute><RequireProfile><EventDetails /></RequireProfile></PrivateRoute>} />
