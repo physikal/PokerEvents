@@ -47,13 +47,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Send verification email immediately after account creation
     if (userCredential.user) {
       try {
-        // Send Firebase verification email
+        // First send Firebase verification email
         await firebaseSendEmailVerification(userCredential.user);
 
-        // Send our custom styled email
+        // Then send our custom styled email
+        const verificationLink = `${window.location.origin}/#/verify-email?oobCode=${userCredential.user.uid}`;
         await sendVerificationEmailService({
           to_email: userCredential.user.email!,
-          verification_link: `${window.location.origin}/#/verify-email` // Base URL only, Firebase will append the oobCode
+          verification_link: verificationLink
         });
 
         toast.success('Verification email sent! Please check your inbox.');
@@ -68,6 +69,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await signInWithPopup(auth, googleProvider);
   };
 
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   const sendVerificationEmail = async () => {
     if (!user || user.emailVerified) return;
 
@@ -76,9 +81,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await firebaseSendEmailVerification(user);
 
       // Send our custom styled email
+      const verificationLink = `${window.location.origin}/#/verify-email?oobCode=${user.uid}`;
       await sendVerificationEmailService({
         to_email: user.email!,
-        verification_link: `${window.location.origin}/#/verify-email` // Base URL only, Firebase will append the oobCode
+        verification_link: verificationLink
       });
 
       toast.success('Verification email sent! Please check your inbox.');
@@ -87,10 +93,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       toast.error('Failed to send verification email. Please try again.');
       throw error;
     }
-  };
-
-  const logout = async () => {
-    await signOut(auth);
   };
 
   const value = {
