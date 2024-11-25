@@ -13,22 +13,25 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     const verifyEmail = async () => {
-      const oobCode = searchParams.get('oobCode');
+      const actionCode = searchParams.get('oobCode');
       
-      if (!oobCode) {
+      if (!actionCode) {
         setError('Invalid verification link');
         setVerifying(false);
         return;
       }
 
       try {
-        await applyActionCode(auth, oobCode);
+        await applyActionCode(auth, actionCode);
         // Force refresh the user's token to update emailVerified status
-        await auth.currentUser?.reload();
+        if (auth.currentUser) {
+          await auth.currentUser.reload();
+        }
         setVerifying(false);
+        toast.success('Email verified successfully!');
       } catch (error) {
         console.error('Email verification error:', error);
-        setError('Failed to verify email address');
+        setError('Failed to verify email address. The link may have expired.');
         setVerifying(false);
       }
     };
