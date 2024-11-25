@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, History, LayoutDashboard, Users } from 'lucide-react';
+import { User, History, LayoutDashboard, Users, Mail } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -47,6 +47,13 @@ export default function Navbar() {
                 <User size={18} />
                 Profile
               </Link>
+              <Link 
+                to="/contact" 
+                className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+              >
+                <Mail size={18} />
+                Contact
+              </Link>
               <button
                 onClick={() => logout()}
                 className="text-gray-300 hover:text-white transition-colors"
@@ -55,7 +62,14 @@ export default function Navbar() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
+              <Link 
+                to="/contact"
+                className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+              >
+                <Mail size={18} />
+                Contact
+              </Link>
               <Link 
                 to="/login"
                 className="text-gray-300 hover:text-white transition-colors"
