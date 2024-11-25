@@ -1,9 +1,8 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
 import RequireProfile from './components/RequireProfile';
-import RequireVerification from './components/RequireVerification';
+import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -15,7 +14,6 @@ import EventDetails from './pages/EventDetails';
 import Profile from './pages/Profile';
 import Groups from './pages/Groups';
 import GroupDetails from './pages/GroupDetails';
-import Contact from './pages/Contact';
 
 function App() {
   return (
@@ -28,66 +26,13 @@ function App() {
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/dashboard" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <Dashboard />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/history" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <History />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/create-event" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <CreateEvent />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/event/:id" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <EventDetails />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/profile" element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              } />
-              <Route path="/groups" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <Groups />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/groups/:id" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <GroupDetails />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
+              <Route path="/dashboard" element={<PrivateRoute><RequireProfile><Dashboard /></RequireProfile></PrivateRoute>} />
+              <Route path="/history" element={<PrivateRoute><RequireProfile><History /></RequireProfile></PrivateRoute>} />
+              <Route path="/create-event" element={<PrivateRoute><RequireProfile><CreateEvent /></RequireProfile></PrivateRoute>} />
+              <Route path="/event/:id" element={<PrivateRoute><RequireProfile><EventDetails /></RequireProfile></PrivateRoute>} />
+              <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+              <Route path="/groups" element={<PrivateRoute><RequireProfile><Groups /></RequireProfile></PrivateRoute>} />
+              <Route path="/groups/:id" element={<PrivateRoute><RequireProfile><GroupDetails /></RequireProfile></PrivateRoute>} />
             </Routes>
           </div>
           <Toaster position="top-right" />

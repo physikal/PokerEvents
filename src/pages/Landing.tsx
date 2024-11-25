@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Users, Calendar, Trophy, ChevronRight, Mail } from 'lucide-react';
+import { ArrowRight, Users, Calendar, Trophy, ChevronRight } from 'lucide-react';
 
 const features = [
   {
@@ -121,22 +121,13 @@ export default function Landing() {
           <p className="text-xl text-gray-100 mb-8 max-w-2xl mx-auto">
             Join now and start organizing professional-level poker events with your friends.
           </p>
-          <div className="flex items-center justify-center gap-4">
-            <Link
-              to="/register"
-              className="btn-primary bg-white text-poker-red hover:bg-gray-100 text-lg px-8 py-3 inline-flex items-center gap-2"
-            >
-              Create Your Account
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-            <Link
-              to="/contact"
-              className="btn-secondary inline-flex items-center gap-2"
-            >
-              <Mail className="w-5 h-5" />
-              Contact Us
-            </Link>
-          </div>
+          <Link
+            to="/register"
+            className="btn-primary bg-white text-poker-red hover:bg-gray-100 text-lg px-8 py-3 inline-flex items-center gap-2"
+          >
+            Create Your Account
+            <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
       </div>
     </div>
