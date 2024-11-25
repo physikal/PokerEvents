@@ -13,7 +13,7 @@ export default function Register() {
     e.preventDefault();
     try {
       await signUp(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (error) {
       toast.error('Failed to create account');
     }
@@ -22,7 +22,7 @@ export default function Register() {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      navigate('/');
+      navigate('/dashboard');
     } catch (error) {
       toast.error('Failed to sign in with Google');
     }

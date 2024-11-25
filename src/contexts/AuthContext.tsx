@@ -6,8 +6,11 @@ import {
   signOut,
   onAuthStateChanged,
   signInWithPopup,
+  sendEmailVerification as firebaseSendEmailVerification,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
+import { sendVerificationEmail as sendVerificationEmailService } from '../lib/emailService';
+import { toast } from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +19,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  sendVerificationEmail: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -38,11 +42,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Send verification email immediately after account creation
+    if (userCredential.user) {
+      try {
+        // Send Firebase verification email
+        await firebaseSendEmailVerification(userCredential.user);
+
+        // Send our custom styled email
+        await sendVerificationEmailService({
+          to_email: userCredential.user.email!,
+          verification_link: `${window.location.origin}/#/verify-email` // Base URL only, Firebase will append the oobCode
+        });
+
+        toast.success('Verification email sent! Please check your inbox.');
+      } catch (error) {
+        console.error('Failed to send verification email:', error);
+        toast.error('Account created but failed to send verification email. Click "Resend" to try again.');
+      }
+    }
   };
 
   const signInWithGoogle = async () => {
     await signInWithPopup(auth, googleProvider);
+  };
+
+  const sendVerificationEmail = async () => {
+    if (!user || user.emailVerified) return;
+
+    try {
+      // Send Firebase verification email
+      await firebaseSendEmailVerification(user);
+
+      // Send our custom styled email
+      await sendVerificationEmailService({
+        to_email: user.email!,
+        verification_link: `${window.location.origin}/#/verify-email` // Base URL only, Firebase will append the oobCode
+      });
+
+      toast.success('Verification email sent! Please check your inbox.');
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      toast.error('Failed to send verification email. Please try again.');
+      throw error;
+    }
   };
 
   const logout = async () => {
@@ -56,6 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     logout,
     signInWithGoogle,
+    sendVerificationEmail,
   };
 
   return (

@@ -22,12 +22,37 @@ interface GroupInviteTemplate {
   reply_to: string;
 }
 
+interface VerificationTemplate {
+  to_email: string;
+  verification_link: string;
+}
+
 interface CancellationTemplate {
   to_emails: string[];
   event_title: string;
   event_date: string;
   event_location: string;
 }
+
+export const sendVerificationEmail = async (templateParams: VerificationTemplate) => {
+  try {
+    const response = await emailjs.send(
+      EMAIL_CONFIG.SERVICE_ID,
+      EMAIL_CONFIG.TEMPLATES.EMAIL_VERIFY,
+      {
+        ...templateParams,
+        app_name: 'Poker Nights',
+        subject: 'Verify your email address',
+        from_name: 'Poker Nights',
+        reply_to: 'noreply@suckingout.com'
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error('Verification email failed:', error);
+    throw error;
+  }
+};
 
 export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
   try {
@@ -38,6 +63,7 @@ export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
         ...templateParams,
         app_name: 'Poker Nights',
         subject: `You're invited to ${templateParams.event_title}`,
+        from_name: 'Poker Nights'
       }
     );
     return response;
@@ -56,6 +82,7 @@ export const sendGroupInvitation = async (templateParams: GroupInviteTemplate) =
         ...templateParams,
         app_name: 'Poker Nights',
         subject: `${templateParams.inviter_name} invited you to join ${templateParams.group_name}`,
+        from_name: 'Poker Nights'
       }
     );
     return response;
@@ -77,9 +104,10 @@ export const sendCancellationEmails = async (params: CancellationTemplate) => {
           event_title: params.event_title,
           event_date: params.event_date,
           event_location: params.event_location,
-          reply_to: 'noreply@suckingout.com',
           app_name: 'Poker Nights',
           subject: `${params.event_title} has been cancelled`,
+          from_name: 'Poker Nights',
+          reply_to: 'noreply@suckingout.com'
         }
       )
     );
