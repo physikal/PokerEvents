@@ -16,7 +16,6 @@ import Profile from './pages/Profile';
 import Groups from './pages/Groups';
 import GroupDetails from './pages/GroupDetails';
 import Contact from './pages/Contact';
-import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
   return (
@@ -30,7 +29,6 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/dashboard" element={
                 <PrivateRoute>
                   <RequireVerification>
