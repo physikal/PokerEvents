@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { applyActionCode } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { toast } from 'react-hot-toast';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 export default function VerifyEmail() {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [verifying, setVerifying] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const verifyEmail = async () => {
+      // Get oobCode from URL parameters
+      const searchParams = new URLSearchParams(location.search);
       const actionCode = searchParams.get('oobCode');
       
       if (!actionCode) {
@@ -37,7 +39,7 @@ export default function VerifyEmail() {
     };
 
     verifyEmail();
-  }, [searchParams]);
+  }, [location]);
 
   if (verifying) {
     return (

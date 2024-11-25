@@ -6,10 +6,9 @@ import {
   signOut,
   onAuthStateChanged,
   signInWithPopup,
-  sendEmailVerification as firebaseSendEmailVerification,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
-import { sendVerificationEmail as sendVerificationEmailService } from '../lib/emailService';
 import { toast } from 'react-hot-toast';
 
 interface AuthContextType {
@@ -47,15 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Send verification email immediately after account creation
     if (userCredential.user) {
       try {
-        // Send Firebase verification email
-        await firebaseSendEmailVerification(userCredential.user);
-
-        // Send our custom styled email
-        await sendVerificationEmailService({
-          to_email: userCredential.user.email!,
-          verification_link: `${window.location.origin}/#/verify-email` // Base URL only, Firebase will append the oobCode
-        });
-
+        await sendEmailVerification(userCredential.user);
         toast.success('Verification email sent! Please check your inbox.');
       } catch (error) {
         console.error('Failed to send verification email:', error);
@@ -68,29 +59,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await signInWithPopup(auth, googleProvider);
   };
 
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   const sendVerificationEmail = async () => {
     if (!user || user.emailVerified) return;
 
     try {
-      // Send Firebase verification email
-      await firebaseSendEmailVerification(user);
-
-      // Send our custom styled email
-      await sendVerificationEmailService({
-        to_email: user.email!,
-        verification_link: `${window.location.origin}/#/verify-email` // Base URL only, Firebase will append the oobCode
-      });
-
+      await sendEmailVerification(user);
       toast.success('Verification email sent! Please check your inbox.');
     } catch (error) {
       console.error('Failed to send verification email:', error);
       toast.error('Failed to send verification email. Please try again.');
       throw error;
     }
-  };
-
-  const logout = async () => {
-    await signOut(auth);
   };
 
   const value = {

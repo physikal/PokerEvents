@@ -22,37 +22,12 @@ interface GroupInviteTemplate {
   reply_to: string;
 }
 
-interface VerificationTemplate {
-  to_email: string;
-  verification_link: string;
-}
-
 interface CancellationTemplate {
   to_emails: string[];
   event_title: string;
   event_date: string;
   event_location: string;
 }
-
-export const sendVerificationEmail = async (templateParams: VerificationTemplate) => {
-  try {
-    const response = await emailjs.send(
-      EMAIL_CONFIG.SERVICE_ID,
-      EMAIL_CONFIG.TEMPLATES.EMAIL_VERIFY,
-      {
-        ...templateParams,
-        app_name: 'Poker Nights',
-        subject: 'Verify your email address',
-        from_name: 'Poker Nights',
-        reply_to: 'noreply@suckingout.com'
-      }
-    );
-    return response;
-  } catch (error) {
-    console.error('Verification email failed:', error);
-    throw error;
-  }
-};
 
 export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
   try {
