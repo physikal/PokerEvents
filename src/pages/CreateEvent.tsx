@@ -9,12 +9,15 @@ import PreviousAttendees from '../components/PreviousAttendees';
 import { sendInvitationEmail } from '../lib/emailService';
 import { UserInfo } from '../types';
 import { useGroups } from '../hooks/useGroups';
-import { Users } from 'lucide-react';
+import { useLocations } from '../hooks/useLocations';
+import { Users, Plus } from 'lucide-react';
+import AddLocationModal from '../components/AddLocationModal';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { groups } = useGroups();
+  const { locations } = useLocations();
   const [formData, setFormData] = useState({
     title: '',
     date: '',
@@ -25,6 +28,7 @@ export default function CreateEvent() {
   });
   const [selectedAttendees, setSelectedAttendees] = useState<UserInfo[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAddLocation, setShowAddLocation] = useState(false);
 
   const validateForm = () => {
     if (!formData.title.trim()) throw new Error('Event title is required');
@@ -35,7 +39,11 @@ export default function CreateEvent() {
 
     const eventDate = new Date(formData.date);
     if (isNaN(eventDate.getTime())) throw new Error('Invalid date format');
-    if (eventDate < new Date()) throw new Error('Event date must be in the future');
+
+    // Only validate future date if it's not a group event
+    if (!formData.groupId && eventDate < new Date()) {
+      throw new Error('Event date must be in the future');
+    }
 
     return eventDate;
   };
@@ -102,30 +110,33 @@ export default function CreateEvent() {
       };
 
       const docRef = await addDoc(collection(db, 'events'), eventData);
+      toast.success('Event created successfully!');
       
-      // Generate event URL
-      const baseUrl = window.location.origin;
-      const eventUrl = `${baseUrl}/#/event/${docRef.id}`;
+      // Only send notifications if the event is in the future
+      if (eventDate > new Date()) {
+        // Generate event URL
+        const baseUrl = window.location.origin;
+        const eventUrl = `${baseUrl}/#/event/${docRef.id}`;
 
-      // Send email notifications to all attendees
-      if (allAttendees.length > 0) {
-        await Promise.all(allAttendees.map(attendee => 
-          sendInvitationEmail({
-            to_email: attendee.email,
-            event_title: eventData.title,
-            event_date: formatToPacific(eventDate),
-            event_location: eventData.location,
-            event_buyin: eventData.buyIn,
-            event_link: eventUrl,
-            reply_to: user.email || 'noreply@suckingout.com'
-          }).catch(error => {
-            console.error(`Failed to send email to ${attendee.email}:`, error);
-            // Don't throw, just log the error and continue
-          })
-        ));
+        // Send email notifications to all attendees
+        if (allAttendees.length > 0) {
+          await Promise.all(allAttendees.map(attendee => 
+            sendInvitationEmail({
+              to_email: attendee.email,
+              event_title: eventData.title,
+              event_date: formatToPacific(eventDate),
+              event_location: eventData.location,
+              event_buyin: eventData.buyIn,
+              event_link: eventUrl,
+              reply_to: user.email || 'noreply@suckingout.com'
+            }).catch(error => {
+              console.error(`Failed to send email to ${attendee.email}:`, error);
+              // Don't throw, just log the error and continue
+            })
+          ));
+        }
       }
 
-      toast.success('Event created successfully!');
       navigate(`/event/${docRef.id}`);
     } catch (error) {
       console.error('Create event error:', error);
@@ -155,22 +166,9 @@ export default function CreateEvent() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="card">
-        <h2 className="text-2xl font-bold mb-6">Create New Poker Night</h2>
+        <h2 className="text-2xl font-bold mb-6">Create New Event</h2>
         
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-1">Event Title</label>
-            <input
-              type="text"
-              name="title"
-              className="input w-full"
-              placeholder="Friday Night Poker"
-              value={formData.title}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
           {groups.length > 0 && (
             <div>
               <label className="block text-sm font-medium mb-1 flex items-center gap-2">
@@ -192,9 +190,23 @@ export default function CreateEvent() {
               </select>
               <p className="mt-1 text-sm text-gray-400">
                 All group members will be automatically invited
+                {formData.groupId && ". Past dates are allowed for group events."}
               </p>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Event Title</label>
+            <input
+              type="text"
+              name="title"
+              className="input w-full"
+              placeholder="Friday Night Poker"
+              value={formData.title}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -210,16 +222,54 @@ export default function CreateEvent() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Location</label>
-              <input
-                type="text"
-                name="location"
-                className="input w-full"
-                placeholder="123 Poker St"
-                value={formData.location}
-                onChange={handleChange}
-                required
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium">Location</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddLocation(true)}
+                  className="text-poker-red hover:text-red-400"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              {locations.length > 0 ? (
+                <select
+                  name="location"
+                  className="input w-full"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select a location</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.address}>
+                      {location.name}
+                    </option>
+                  ))}
+                  <option value="custom">Enter Custom Location</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  name="location"
+                  className="input w-full"
+                  placeholder="123 Poker St"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required
+                />
+              )}
+              {locations.length > 0 && formData.location === 'custom' && (
+                <input
+                  type="text"
+                  name="location"
+                  className="input w-full mt-2"
+                  placeholder="Enter custom location"
+                  value=""
+                  onChange={handleChange}
+                  required
+                />
+              )}
             </div>
 
             <div>
@@ -279,6 +329,10 @@ export default function CreateEvent() {
             selectedAttendees={selectedAttendees.map(a => a.id)}
           />
         </div>
+      )}
+
+      {showAddLocation && (
+        <AddLocationModal onClose={() => setShowAddLocation(false)} />
       )}
     </div>
   );

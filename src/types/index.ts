@@ -8,7 +8,6 @@ export interface PokerEvent {
   currentPlayers: string[];
   invitedPlayers: string[];
   ownerId: string;
-  groupId?: string;
   winners?: {
     first?: { userId: string; prize: number };
     second?: { userId: string; prize: number };
@@ -17,21 +16,13 @@ export interface PokerEvent {
   status: 'upcoming' | 'in-progress' | 'completed';
   createdAt: string;
   timezone?: string;
+  groupId?: string;
 }
 
 export interface UserStats {
   gamesPlayed: number;
   gamesWon: number;
   upcomingGames: number;
-}
-
-export interface UserProfile {
-  id: string;
-  email: string;
-  displayName?: string;
-  timezone: string;
-  createdAt: string;
-  updatedAt: string;
   groups?: string[];
 }
 
@@ -58,4 +49,12 @@ export interface GroupStats {
   gamesPlayed: number;
   gamesWon: number;
   totalEarnings: number;
+}
+
+export interface Location {
+  id: string;
+  name: string;
+  address: string;
+  ownerId: string;
+  createdAt: string;
 }
