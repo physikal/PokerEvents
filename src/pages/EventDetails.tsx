@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { UserMinus, UserPlus, Trophy, Users, Crown, Mail } from 'lucide-react';
+import { UserMinus, UserPlus, Trophy, Users, Calendar } from 'lucide-react';
 import {
   doc,
   onSnapshot,
@@ -19,11 +19,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { PokerEvent, UserInfo } from '../types';
 import InviteModal from '../components/InviteModal';
 import WinnerModal from '../components/WinnerModal';
-import CancelEventModal from '../components/CancelEventModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { formatToPacific } from '../utils/dateUtils';
 import { sendCancellationEmails } from '../lib/emailService';
-import { useGroups } from '../hooks/useGroups';
+import { generateICSContent, downloadICSFile } from '../utils/calendarUtils';
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -31,13 +30,12 @@ export default function EventDetails() {
   const { user } = useAuth();
   const [event, setEvent] = useState<PokerEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [participants, setParticipants] = useState<UserInfo[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [participants, setParticipants] = useState<UserInfo[]>([]);
-  const [showRemoveConfirmation, setShowRemoveConfirmation] = useState<string | null>(null);
+  const [inviteToRemove, setInviteToRemove] = useState<string | null>(null);
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState(false);
-  const { groups } = useGroups();
 
   useEffect(() => {
     if (!id) return;
@@ -55,9 +53,8 @@ export default function EventDetails() {
           const userSnap = await getDocs(q);
           const usersList = userSnap.docs.map(doc => ({
             id: doc.id,
-            email: doc.data().email || '',
-            displayName: doc.data().displayName,
-          }));
+            ...doc.data()
+          } as UserInfo));
           setParticipants(usersList);
         } else {
           toast.error('Event not found');
@@ -107,30 +104,16 @@ export default function EventDetails() {
     }
   };
 
-  const handleInvite = async (email: string) => {
-    if (!event) return;
+  const handleRemoveInvite = async () => {
+    if (!event || !inviteToRemove) return;
     
     try {
       const eventRef = doc(db, 'events', event.id);
       await updateDoc(eventRef, {
-        invitedPlayers: arrayUnion(email)
-      });
-    } catch (error) {
-      console.error('Invite error:', error);
-      throw new Error('Failed to update invited players');
-    }
-  };
-
-  const handleRemoveInvite = async (email: string) => {
-    if (!event) return;
-    
-    try {
-      const eventRef = doc(db, 'events', event.id);
-      await updateDoc(eventRef, {
-        invitedPlayers: arrayRemove(email)
+        invitedPlayers: arrayRemove(inviteToRemove)
       });
       toast.success('Invitation removed');
-      setShowRemoveConfirmation(null);
+      setInviteToRemove(null);
     } catch (error) {
       console.error('Remove invite error:', error);
       toast.error('Failed to remove invitation');
@@ -182,6 +165,20 @@ export default function EventDetails() {
     }
   };
 
+  const handleCalendarDownload = () => {
+    if (!event) return;
+
+    const icsContent = generateICSContent({
+      title: event.title,
+      date: event.date,
+      location: event.location,
+      buyIn: event.buyIn,
+      description: `Poker Night - ${event.currentPlayers.length}/${event.maxPlayers} players`
+    });
+
+    downloadICSFile(icsContent, `${event.title.toLowerCase().replace(/\s+/g, '-')}.ics`);
+  };
+
   if (loading || !event) {
     return <div>Loading...</div>;
   }
@@ -192,7 +189,11 @@ export default function EventDetails() {
   const isInvited = event.invitedPlayers?.includes(user?.email || '');
   const eventDate = new Date(event.date);
   const isPastEvent = eventDate < new Date() && event.status !== 'completed';
-  const group = event.groupId ? groups.find(g => g.id === event.groupId) : null;
+
+  const getParticipantName = (userId: string) => {
+    const participant = participants.find(p => p.id === userId);
+    return participant?.displayName || participant?.email || userId;
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -205,12 +206,13 @@ export default function EventDetails() {
               <p>{event.location}</p>
               <p>${event.buyIn} buy-in</p>
               <p>{event.currentPlayers.length}/{event.maxPlayers} players</p>
-              {group && (
-                <p className="flex items-center gap-2 text-poker-gold">
-                  <Users size={18} />
-                  {group.name}
-                </p>
-              )}
+              <button
+                onClick={handleCalendarDownload}
+                className="inline-flex items-center gap-2 text-poker-red hover:text-red-400 transition-colors"
+              >
+                <Calendar size={18} />
+                Add to Calendar
+              </button>
             </div>
           </div>
 
@@ -222,7 +224,7 @@ export default function EventDetails() {
                     onClick={() => setShowInviteModal(true)}
                     className="btn-primary w-full flex items-center justify-center gap-2"
                   >
-                    <Mail size={18} />
+                    <UserPlus size={18} />
                     Invite Players
                   </button>
                   <button
@@ -267,18 +269,9 @@ export default function EventDetails() {
                 key={player.id}
                 className="p-3 bg-gray-800 rounded-lg flex items-center justify-between"
               >
-                <div>
-                  <div className="font-medium">
-                    {player.displayName || player.email}
-                  </div>
-                  {player.displayName && (
-                    <div className="text-sm text-gray-400">{player.email}</div>
-                  )}
-                </div>
+                <span>{player.displayName || player.email}</span>
                 {player.id === event.ownerId && (
-                  <span className="text-xs bg-poker-red px-2 py-1 rounded">
-                    Host
-                  </span>
+                  <span className="text-xs bg-poker-red px-2 py-1 rounded">Host</span>
                 )}
               </div>
             ))}
@@ -302,30 +295,21 @@ export default function EventDetails() {
               {event.winners.first && (
                 <div className="card bg-gradient-to-br from-poker-gold to-yellow-600">
                   <p className="font-bold">1st Place</p>
-                  <p className="text-lg">
-                    {participants.find(p => p.id === event.winners?.first?.userId)?.displayName || 
-                     participants.find(p => p.id === event.winners?.first?.userId)?.email}
-                  </p>
+                  <p className="text-lg">{getParticipantName(event.winners.first.userId)}</p>
                   <p className="text-sm">${event.winners.first.prize}</p>
                 </div>
               )}
               {event.winners.second && (
                 <div className="card bg-gradient-to-br from-gray-400 to-gray-600">
                   <p className="font-bold">2nd Place</p>
-                  <p className="text-lg">
-                    {participants.find(p => p.id === event.winners?.second?.userId)?.displayName ||
-                     participants.find(p => p.id === event.winners?.second?.userId)?.email}
-                  </p>
+                  <p className="text-lg">{getParticipantName(event.winners.second.userId)}</p>
                   <p className="text-sm">${event.winners.second.prize}</p>
                 </div>
               )}
               {event.winners.third && (
                 <div className="card bg-gradient-to-br from-amber-700 to-amber-900">
                   <p className="font-bold">3rd Place</p>
-                  <p className="text-lg">
-                    {participants.find(p => p.id === event.winners?.third?.userId)?.displayName ||
-                     participants.find(p => p.id === event.winners?.third?.userId)?.email}
-                  </p>
+                  <p className="text-lg">{getParticipantName(event.winners.third.userId)}</p>
                   <p className="text-sm">${event.winners.third.prize}</p>
                 </div>
               )}
@@ -344,7 +328,7 @@ export default function EventDetails() {
                 >
                   <span>{email}</span>
                   <button
-                    onClick={() => setShowRemoveConfirmation(email)}
+                    onClick={() => setInviteToRemove(email)}
                     className="text-gray-400 hover:text-red-500"
                   >
                     <UserMinus size={18} />
@@ -356,12 +340,10 @@ export default function EventDetails() {
         )}
       </div>
 
-      {/* Modals */}
       {showInviteModal && (
         <InviteModal
           event={event}
           onClose={() => setShowInviteModal(false)}
-          onInvite={handleInvite}
         />
       )}
 
@@ -375,21 +357,13 @@ export default function EventDetails() {
       )}
 
       {showCancelModal && (
-        <CancelEventModal
-          event={event}
-          onClose={() => setShowCancelModal(false)}
-          onCancel={handleCancelEvent}
-        />
-      )}
-
-      {showRemoveConfirmation && (
         <ConfirmationModal
-          title="Remove Invitation"
-          message={`Are you sure you want to remove the invitation for ${showRemoveConfirmation}?`}
-          confirmLabel="Remove Invitation"
+          title="Cancel Event"
+          message="Are you sure you want to cancel this event? All attendees will be notified. This action cannot be undone."
+          confirmLabel="Cancel Event"
           confirmStyle="danger"
-          onConfirm={() => handleRemoveInvite(showRemoveConfirmation)}
-          onClose={() => setShowRemoveConfirmation(null)}
+          onConfirm={handleCancelEvent}
+          onClose={() => setShowCancelModal(false)}
         />
       )}
 
@@ -401,6 +375,17 @@ export default function EventDetails() {
           confirmStyle="danger"
           onConfirm={handleLeave}
           onClose={() => setShowLeaveConfirmation(false)}
+        />
+      )}
+
+      {inviteToRemove && (
+        <ConfirmationModal
+          title="Remove Invitation"
+          message={`Are you sure you want to remove the invitation for ${inviteToRemove}?`}
+          confirmLabel="Remove Invitation"
+          confirmStyle="danger"
+          onConfirm={handleRemoveInvite}
+          onClose={() => setInviteToRemove(null)}
         />
       )}
     </div>

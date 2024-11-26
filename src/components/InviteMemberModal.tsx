@@ -14,39 +14,68 @@ interface InviteMemberModalProps {
 
 export default function InviteMemberModal({ group, onClose }: InviteMemberModalProps) {
   const { user } = useAuth();
-  const [email, setEmail] = useState('');
+  const [emails, setEmails] = useState('');
   const [sending, setSending] = useState(false);
+
+  const validateEmails = (emailList: string[]): string[] => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailList.filter(email => emailRegex.test(email.trim()));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !email || sending) return;
+    if (!user || !emails || sending) return;
+
+    // Split emails by commas or newlines and trim whitespace
+    const emailList = emails
+      .split(/[\s,]+/)
+      .map(email => email.trim().toLowerCase())
+      .filter(email => email.length > 0);
+
+    // Validate emails
+    const validEmails = validateEmails(emailList);
+    
+    if (validEmails.length === 0) {
+      toast.error('Please enter valid email addresses');
+      return;
+    }
+
+    if (validEmails.length !== emailList.length) {
+      toast.error('Some email addresses are invalid and will be skipped');
+    }
 
     setSending(true);
     try {
       const groupRef = doc(db, 'groups', group.id);
+      
+      // Update Firestore with all valid emails at once
       await updateDoc(groupRef, {
-        invitedMembers: arrayUnion(email.toLowerCase())
+        invitedMembers: arrayUnion(...validEmails)
       });
 
       // Generate the absolute URL for the groups page
       const baseUrl = window.location.origin;
       const groupUrl = `${baseUrl}/#/groups`;
 
-      // Send invitation email
-      await sendGroupInvitation({
-        to_email: email,
-        group_name: group.name,
-        inviter_name: user.displayName || user.email || 'A poker player',
-        group_link: groupUrl,
-        reply_to: user.email || 'noreply@suckingout.com'
-      });
+      // Send invitation emails
+      await Promise.all(validEmails.map(email => 
+        sendGroupInvitation({
+          to_email: email,
+          group_name: group.name,
+          inviter_name: user.displayName || user.email || 'A poker player',
+          group_link: groupUrl,
+          reply_to: user.email || 'noreply@suckingout.com'
+        }).catch(error => {
+          console.error(`Failed to send email to ${email}:`, error);
+          // Don't throw, just log the error and continue
+        })
+      ));
 
-      toast.success(`Invitation sent to ${email}`);
-      setEmail('');
+      toast.success(`Invitations sent to ${validEmails.length} email${validEmails.length === 1 ? '' : 's'}`);
       onClose();
     } catch (error) {
-      console.error('Invite member error:', error);
-      toast.error('Failed to send invitation');
+      console.error('Invite members error:', error);
+      toast.error('Failed to send invitations');
     } finally {
       setSending(false);
     }
@@ -62,19 +91,21 @@ export default function InviteMemberModal({ group, onClose }: InviteMemberModalP
           <X size={20} />
         </button>
 
-        <h2 className="text-xl font-bold mb-6">Invite Member to {group.name}</h2>
+        <h2 className="text-xl font-bold mb-6">Invite Members to {group.name}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Email Address</label>
-            <input
-              type="email"
-              className="input w-full"
-              placeholder="player@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+            <label className="block text-sm font-medium mb-1">Email Addresses</label>
+            <textarea
+              className="input w-full h-32 resize-none"
+              placeholder="Enter email addresses (comma or newline separated)&#10;example1@email.com&#10;example2@email.com"
+              value={emails}
+              onChange={(e) => setEmails(e.target.value)}
               required
             />
+            <p className="mt-1 text-sm text-gray-400">
+              You can enter multiple email addresses separated by commas or new lines
+            </p>
           </div>
 
           <div className="flex justify-end space-x-3">
@@ -91,7 +122,7 @@ export default function InviteMemberModal({ group, onClose }: InviteMemberModalP
               className="btn-primary"
               disabled={sending}
             >
-              {sending ? 'Sending...' : 'Send Invite'}
+              {sending ? 'Sending...' : 'Send Invites'}
             </button>
           </div>
         </form>
