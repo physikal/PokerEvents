@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { usePokerEvents } from '../hooks/usePokerEvents';
 import { useInvitations } from '../hooks/useInvitations';
 import { useUserStats } from '../hooks/useUserStats';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, Crown, Mail } from 'lucide-react';
+import { Users, Crown, Mail, Check, X } from 'lucide-react';
 import { useGroups } from '../hooks/useGroups';
 import { useGroupInvites } from '../hooks/useGroupInvites';
 import { PokerEvent } from '../types';
 import { formatToPacific } from '../utils/dateUtils';
+import { InvitationService } from '../services/invitationService';
 
 export default function Dashboard() {
   const { events: upcomingEvents, loading: eventsLoading } = usePokerEvents('upcoming');
@@ -21,34 +20,42 @@ export default function Dashboard() {
   const { user } = useAuth();
 
   const handleAcceptInvite = async (eventId: string) => {
-    if (!user) return;
-    
     try {
-      const eventRef = doc(db, 'events', eventId);
-      await updateDoc(eventRef, {
-        currentPlayers: arrayUnion(user.uid),
-        invitedPlayers: arrayRemove(user.email)
-      });
+      await InvitationService.acceptEventInvite(eventId, user);
       toast.success('Successfully joined the event!');
     } catch (error) {
       console.error('Accept invitation error:', error);
-      toast.error('Failed to join event');
+      toast.error(error instanceof Error ? error.message : 'Failed to join event');
+    }
+  };
+
+  const handleDeclineInvite = async (eventId: string) => {
+    try {
+      await InvitationService.declineEventInvite(eventId, user);
+      toast.success('Invitation declined');
+    } catch (error) {
+      console.error('Decline invitation error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to decline invitation');
     }
   };
 
   const handleAcceptGroupInvite = async (groupId: string) => {
-    if (!user?.email) return;
-    
     try {
-      const groupRef = doc(db, 'groups', groupId);
-      await updateDoc(groupRef, {
-        members: arrayUnion(user.uid),
-        invitedMembers: arrayRemove(user.email)
-      });
+      await InvitationService.acceptGroupInvite(groupId, user);
       toast.success('Successfully joined the group!');
     } catch (error) {
       console.error('Accept group invitation error:', error);
-      toast.error('Failed to join group');
+      toast.error(error instanceof Error ? error.message : 'Failed to join group');
+    }
+  };
+
+  const handleDeclineGroupInvite = async (groupId: string) => {
+    try {
+      await InvitationService.declineGroupInvite(groupId, user);
+      toast.success('Group invitation declined');
+    } catch (error) {
+      console.error('Decline group invitation error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to decline invitation');
     }
   };
 
@@ -166,12 +173,22 @@ export default function Dashboard() {
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleAcceptInvite(event.id)}
-                      className="btn-primary"
-                    >
-                      Accept
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDeclineInvite(event.id)}
+                        className="btn-secondary p-2"
+                        title="Decline"
+                      >
+                        <X size={18} className="text-red-400" />
+                      </button>
+                      <button
+                        onClick={() => handleAcceptInvite(event.id)}
+                        className="btn-primary p-2"
+                        title="Accept"
+                      >
+                        <Check size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -192,12 +209,22 @@ export default function Dashboard() {
                         <p className="text-sm text-gray-400 mt-1">{group.description}</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleAcceptGroupInvite(group.id)}
-                      className="btn-primary"
-                    >
-                      Accept
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDeclineGroupInvite(group.id)}
+                        className="btn-secondary p-2"
+                        title="Decline"
+                      >
+                        <X size={18} className="text-red-400" />
+                      </button>
+                      <button
+                        onClick={() => handleAcceptGroupInvite(group.id)}
+                        className="btn-primary p-2"
+                        title="Accept"
+                      >
+                        <Check size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

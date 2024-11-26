@@ -4,7 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import RequireProfile from './components/RequireProfile';
 import RequireVerification from './components/RequireVerification';
-import Navbar from './components/Navbar';
+import Navbar from './components/layout/Navbar';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
