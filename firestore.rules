@@ -36,6 +36,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email in groupData.invitedMembers;
     }
 
+    // Helper function to validate tournament template data
+    function isValidTournamentTemplate(data) {
+      return data.size() > 0 
+        && data.name is string 
+        && data.name.size() > 0
+        && data.ownerId is string
+        && data.blindTemplate is map
+        && data.chipTemplate is map
+        && data.updatedAt is string;
+    }
+
     // User profiles
     match /users/{userId} {
       // Allow reading any user profile if authenticated
@@ -159,6 +170,28 @@ service cloud.firestore {
       
       // Allow deleting own locations
       allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Tournament templates collection rules
+    match /tournamentTemplates/{templateId} {
+      // Allow reading own templates
+      allow read: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      
+      // Allow creating new templates
+      allow create: if isAuthenticated() 
+        && request.resource.data.ownerId == request.auth.uid
+        && isValidTournamentTemplate(request.resource.data)
+        && request.resource.data.createdAt is string;
+      
+      // Allow updating own templates
+      allow update: if isAuthenticated()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid
+        && isValidTournamentTemplate(request.resource.data);
+      
+      // Allow deleting own templates
+      allow delete: if isAuthenticated()
+        && resource.data.ownerId == request.auth.uid;
     }
   }
 }

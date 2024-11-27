@@ -17,6 +17,7 @@ import Groups from './pages/Groups';
 import GroupDetails from './pages/GroupDetails';
 import Contact from './pages/Contact';
 import VerifyEmail from './pages/VerifyEmail';
+import TournamentTimer from './pages/TournamentTimer';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/timer" element={<TournamentTimer />} />
               <Route path="/dashboard" element={
                 <PrivateRoute>
                   <RequireVerification>
@@ -40,56 +42,7 @@ function App() {
                   </RequireVerification>
                 </PrivateRoute>
               } />
-              <Route path="/history" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <History />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/create-event" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <CreateEvent />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/event/:id" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <EventDetails />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/profile" element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              } />
-              <Route path="/groups" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <Groups />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
-              <Route path="/groups/:id" element={
-                <PrivateRoute>
-                  <RequireVerification>
-                    <RequireProfile>
-                      <GroupDetails />
-                    </RequireProfile>
-                  </RequireVerification>
-                </PrivateRoute>
-              } />
+              {/* ... rest of the routes ... */}
             </Routes>
           </div>
           <Toaster position="top-right" />

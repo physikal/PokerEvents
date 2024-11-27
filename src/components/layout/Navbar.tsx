@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { User, History, LayoutDashboard, Users, Mail } from 'lucide-react';
+import { User, History, LayoutDashboard, Users, Mail, Timer } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Navbar() {
@@ -13,7 +13,7 @@ export default function Navbar() {
   return (
     <nav className="bg-gray-900 border-b border-gray-800">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-32"> {/* Increased from h-28 to h-32 to accommodate larger logo */}
+        <div className="flex items-center justify-between h-32">
           <Logo />
           
           {user ? (
@@ -38,6 +38,13 @@ export default function Navbar() {
               >
                 <Users size={18} />
                 Groups
+              </Link>
+              <Link 
+                to="/timer" 
+                className="text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+              >
+                <Timer size={18} />
+                Timer
               </Link>
               <Link 
                 to="/profile" 
