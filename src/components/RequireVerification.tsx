@@ -1,10 +1,40 @@
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function RequireVerification({ children }: { children: React.ReactNode }) {
   const { user, sendVerificationEmail } = useAuth();
+  const [checkingVerification, setCheckingVerification] = useState(false);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (user && !user.emailVerified) {
+      // Check verification status every 5 seconds
+      intervalId = setInterval(async () => {
+        try {
+          setCheckingVerification(true);
+          await user.reload();
+          if (user.emailVerified) {
+            clearInterval(intervalId);
+            window.location.reload(); // Force reload once verified
+          }
+        } catch (error) {
+          console.error('Error checking verification status:', error);
+        } finally {
+          setCheckingVerification(false);
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [user]);
 
   if (!user?.emailVerified) {
     return (
@@ -26,12 +56,18 @@ export default function RequireVerification({ children }: { children: React.Reac
               toast.success('Verification email sent! Please check your inbox.');
             }}
             className="btn-primary w-full"
+            disabled={checkingVerification}
           >
             Resend Verification Email
           </button>
 
           <p className="mt-4 text-sm text-gray-400 text-center">
-            Once verified, refresh the page to continue.
+            The page will automatically refresh once your email is verified.
+            {checkingVerification && (
+              <span className="block mt-2 text-poker-red">
+                Checking verification status...
+              </span>
+            )}
           </p>
         </div>
       </div>
