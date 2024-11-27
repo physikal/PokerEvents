@@ -42,7 +42,58 @@ function App() {
                   </RequireVerification>
                 </PrivateRoute>
               } />
-              {/* ... rest of the routes ... */}
+              <Route path="/history" element={
+                <PrivateRoute>
+                  <RequireVerification>
+                    <RequireProfile>
+                      <History />
+                    </RequireProfile>
+                  </RequireVerification>
+                </PrivateRoute>
+              } />
+              <Route path="/groups" element={
+                <PrivateRoute>
+                  <RequireVerification>
+                    <RequireProfile>
+                      <Groups />
+                    </RequireProfile>
+                  </RequireVerification>
+                </PrivateRoute>
+              } />
+              <Route path="/groups/:id" element={
+                <PrivateRoute>
+                  <RequireVerification>
+                    <RequireProfile>
+                      <GroupDetails />
+                    </RequireProfile>
+                  </RequireVerification>
+                </PrivateRoute>
+              } />
+              <Route path="/profile" element={
+                <PrivateRoute>
+                  <RequireVerification>
+                    <Profile />
+                  </RequireVerification>
+                </PrivateRoute>
+              } />
+              <Route path="/create-event" element={
+                <PrivateRoute>
+                  <RequireVerification>
+                    <RequireProfile>
+                      <CreateEvent />
+                    </RequireProfile>
+                  </RequireVerification>
+                </PrivateRoute>
+              } />
+              <Route path="/event/:id" element={
+                <PrivateRoute>
+                  <RequireVerification>
+                    <RequireProfile>
+                      <EventDetails />
+                    </RequireProfile>
+                  </RequireVerification>
+                </PrivateRoute>
+              } />
             </Routes>
           </div>
           <Toaster position="top-right" />
