@@ -17,6 +17,17 @@ export interface PokerEvent {
   createdAt: string;
   timezone?: string;
   groupId?: string;
+  tables?: PokerTable[];
+}
+
+export interface PokerTable {
+  id: string;
+  name: string;
+  maxSeats: number;
+  reservedSeats: {
+    seatNumber: number;
+    playerId: string;
+  }[];
 }
 
 export interface UserStats {

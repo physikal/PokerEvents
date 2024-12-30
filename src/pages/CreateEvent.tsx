@@ -98,6 +98,7 @@ export default function CreateEvent() {
       const eventData = {
         title: formData.title.trim(),
         date: toPacificISOString(eventDate),
+        tables: [],
         location: formData.location.trim(),
         buyIn: Number(formData.buyIn),
         maxPlayers: Number(formData.maxPlayers),

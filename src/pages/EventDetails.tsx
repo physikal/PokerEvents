@@ -18,6 +18,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { PokerEvent, UserInfo } from '../types';
 import InviteModal from '../components/InviteModal';
+import TableManagement from '../components/TableManagement';
 import WinnerModal from '../components/WinnerModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { formatToPacific } from '../utils/dateUtils';
@@ -79,7 +80,8 @@ export default function EventDetails() {
       const eventRef = doc(db, 'events', event.id);
       await updateDoc(eventRef, {
         currentPlayers: arrayUnion(user.uid),
-        invitedPlayers: arrayRemove(user.email)
+        invitedPlayers: arrayRemove(user.email),
+        tables: event.tables || []
       });
       toast.success('Successfully joined the event!');
     } catch (error) {
@@ -314,6 +316,18 @@ export default function EventDetails() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Table Management */}
+        {event.status === 'upcoming' && (
+          <div className="mt-8">
+            <TableManagement
+              event={event}
+              participants={participants}
+              currentUserId={user.uid}
+              isOwner={isOwner}
+            />
           </div>
         )}
 
