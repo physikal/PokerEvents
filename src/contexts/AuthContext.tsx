@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await signOut(auth);
   };
 
-  const sendVerificationEmail = async () => {
+  const handleSendVerificationEmail = async () => {
     if (!user || user.emailVerified) return;
 
     try {
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     logout,
     signInWithGoogle,
-    sendVerificationEmail,
+    sendVerificationEmail: handleSendVerificationEmail,
   };
 
   return (

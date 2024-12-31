@@ -91,6 +91,11 @@ interface CancellationTemplate {
   event_location: string;
 }
 
+interface VerificationTemplate {
+  to_email: string;
+  verification_link: string;
+}
+
 export const sendInvitationEmail = async (templateParams: EmailTemplate) => {
   try {
     return await sendEmailWithRetry(
@@ -144,6 +149,21 @@ export const sendCancellationEmails = async (params: CancellationTemplate) => {
     }
   } catch (error) {
     console.error('Failed to send cancellation emails:', error);
+    throw error;
+  }
+};
+
+export const sendVerificationEmail = async (params: VerificationTemplate) => {
+  try {
+    return await sendEmailWithRetry(
+      EMAIL_CONFIG.TEMPLATES.EMAIL_VERIFY,
+      {
+        ...params,
+        subject: 'Verify your email address'
+      }
+    );
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
     throw error;
   }
 };
